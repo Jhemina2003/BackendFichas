@@ -12,20 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('llamadas', function (Blueprint $table) {
-            /**
-             * References
-             */
+            // Referencias
             $table->id('llamada_id');
             $table->integer('fk_usuario_id');
             $table->integer('fk_ventanilla_id');
-            $table->integer('fk_ficha_id');
+            $table->integer('fk_ficha_id')->nullable();
             $table->foreign('fk_usuario_id')->references('usuario_id')->on('usuarios');
             $table->foreign('fk_ventanilla_id')->references('ventanilla_id')->on('ventanillas');
-            // Relación foránea fk_ficha_id se agregará en migración separada
+            // La relación foránea fk_ficha_id se agregará en migración separada
 
-            /**
-             * Columnas
-             */
+            // Columnas
             $table->timestamp('fecha')->useCurrent();
             $table->timestamps();
         });

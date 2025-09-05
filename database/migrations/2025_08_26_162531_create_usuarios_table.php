@@ -18,7 +18,7 @@ return new class extends Migration
             $table->id('usuario_id');
             $table->integer('fk_dominio_tipo_servicio_id');
             $table->integer('fk_sucursal_id');
-            $table->integer('fk_persona_id');
+            $table->integer('fk_persona_id'); // atributo normal, sin foreign key
             $table->foreign('fk_sucursal_id')->references('sucursal_id')->on('sucursales');
             $table->foreign('fk_dominio_tipo_servicio_id')->references('dominio_id')->on('dominios');
 
@@ -26,7 +26,6 @@ return new class extends Migration
              * Columnas
              */
             $table->string('usuario', 255);
-            #$table->string('password');
             $table->string('nombre_completo', 255);
             $table->string('correo_electronico', 255);
             $table->boolean('activo')->default(true);

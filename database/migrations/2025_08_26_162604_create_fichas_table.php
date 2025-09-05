@@ -12,22 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('fichas', function (Blueprint $table) {
-            /**
-             * References
-             */
+            // Referencias
             $table->id('ficha_id');
             $table->integer('fk_sesion_id');
             $table->integer('fk_dominio_tipo_id');
-            $table->integer('fk_dominio_prioridad_id');
-            $table->integer('fk_llamada_id');
+            $table->integer('fk_llamada_id')->nullable();
             $table->foreign('fk_sesion_id')->references('sesion_id')->on('sesiones');
             $table->foreign('fk_dominio_tipo_id')->references('dominio_id')->on('dominios');
-            $table->foreign('fk_dominio_prioridad_id')->references('dominio_id')->on('dominios');
-            $table->foreign('fk_llamada_id')->references('llamada_id')->on('llamadas');
+            // La relación foránea fk_llamada_id se agregará en migración separada
 
-            /**
-             * Columnas
-             */
+            // Columnas
             $table->integer('numero');
             $table->timestamp('fecha_inicio');
             $table->timestamp('fecha_fin')->nullable();

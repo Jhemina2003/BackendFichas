@@ -14,6 +14,9 @@ return new class extends Migration
         Schema::table('llamadas', function (Blueprint $table) {
             $table->foreign('fk_ficha_id')->references('ficha_id')->on('fichas');
         });
+        Schema::table('fichas', function (Blueprint $table) {
+            $table->foreign('fk_llamada_id')->references('llamada_id')->on('llamadas');
+        });
     }
 
     /**
@@ -23,6 +26,9 @@ return new class extends Migration
     {
         Schema::table('llamadas', function (Blueprint $table) {
             $table->dropForeign(['fk_ficha_id']);
+        });
+        Schema::table('fichas', function (Blueprint $table) {
+            $table->dropForeign(['fk_llamada_id']);
         });
     }
 };

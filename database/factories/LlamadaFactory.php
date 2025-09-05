@@ -14,7 +14,7 @@ class LlamadaFactory extends Factory
         return [
             'fk_usuario_id' => \App\Models\Usuario::factory(),
             'fk_ventanilla_id' => \App\Models\Ventanilla::factory(),
-            'fk_ficha_id' => \App\Models\Ficha::factory(),
+            'fk_ficha_id' => null,
             'fecha' => now(),
         ];
     }
