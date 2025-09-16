@@ -11,7 +11,8 @@ return [
     | framework needs to place the application's name in a notification or
     | other UI elements where an application name needs to be displayed.
     |
-    */
+       // ...existing code...
+       DarkaOnLine\L5Swagger\L5SwaggerServiceProvider::class,
 
     'name' => env('APP_NAME', 'Laravel'),
 

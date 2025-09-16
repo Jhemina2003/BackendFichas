@@ -14,6 +14,9 @@ class FichaFactory extends Factory
         return [
             'fk_sesion_id' => \App\Models\Sesion::factory(),
             'fk_dominio_tipo_id' => \App\Models\Dominio::factory(),
+            'fk_tipo_ficha_id' => \App\Models\Dominio::factory(),
+            'fk_tipo_servicio_id' => \App\Models\Dominio::factory(),
+            'fk_prioridad_ficha_id' => $this->faker->optional()->randomElement([\App\Models\Dominio::factory()]),
             'fk_llamada_id' => null,
             'numero' => $this->faker->randomNumber(4),
             'fecha_inicio' => now(),
