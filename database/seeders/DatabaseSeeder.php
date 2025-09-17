@@ -96,123 +96,159 @@ class DatabaseSeeder extends Seeder
             'fk_persona_id' => 2
         ]);
 
-        // Fichas de ejemplo cubriendo todas las combinaciones
+        // Fichas de ejemplo cubriendo todas las combinaciones usando FichaService
+        $fichaService = new \App\Services\FichaService();
+        
         $fichas = [
             // Fichas normales (sin prioridad)
             [
-                'tipo' => $tipoNormal->dominio_id,
-                'servicio' => $servicioApostilla->dominio_id,
-                'prioridad' => null,
-                'numero' => 1
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'normal',
+                'tipo_servicio' => 'apostilla',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoNormal->dominio_id,
-                'servicio' => $servicioLegalizaciones->dominio_id,
-                'prioridad' => null,
-                'numero' => 2
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'normal',
+                'tipo_servicio' => 'legalizaciones',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoNormal->dominio_id,
-                'servicio' => $servicioVivencia->dominio_id,
-                'prioridad' => null,
-                'numero' => 3
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'normal',
+                'tipo_servicio' => 'vivencia',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoNormal->dominio_id,
-                'servicio' => $servicioDevoluciones->dominio_id,
-                'prioridad' => null,
-                'numero' => 4
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'normal',
+                'tipo_servicio' => 'devoluciones',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             // Fichas con prioridad: Embarazada
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioApostilla->dominio_id,
-                'prioridad' => $prioridadEmbarazada->dominio_id,
-                'numero' => 5
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'apostilla',
+                'prioridad_ficha' => 'embarazada',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioLegalizaciones->dominio_id,
-                'prioridad' => $prioridadEmbarazada->dominio_id,
-                'numero' => 6
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'legalizaciones',
+                'prioridad_ficha' => 'embarazada',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioVivencia->dominio_id,
-                'prioridad' => $prioridadEmbarazada->dominio_id,
-                'numero' => 7
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'vivencia',
+                'prioridad_ficha' => 'embarazada',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioDevoluciones->dominio_id,
-                'prioridad' => $prioridadEmbarazada->dominio_id,
-                'numero' => 8
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'devoluciones',
+                'prioridad_ficha' => 'embarazada',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             // Fichas con prioridad: Tercera Edad
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioApostilla->dominio_id,
-                'prioridad' => $prioridadTerceraEdad->dominio_id,
-                'numero' => 9
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'apostilla',
+                'prioridad_ficha' => 'tercera_edad',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioLegalizaciones->dominio_id,
-                'prioridad' => $prioridadTerceraEdad->dominio_id,
-                'numero' => 10
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'legalizaciones',
+                'prioridad_ficha' => 'tercera_edad',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioVivencia->dominio_id,
-                'prioridad' => $prioridadTerceraEdad->dominio_id,
-                'numero' => 11
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'vivencia',
+                'prioridad_ficha' => 'tercera_edad',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioDevoluciones->dominio_id,
-                'prioridad' => $prioridadTerceraEdad->dominio_id,
-                'numero' => 12
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'devoluciones',
+                'prioridad_ficha' => 'tercera_edad',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             // Fichas con prioridad: Discapacidad
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioApostilla->dominio_id,
-                'prioridad' => $prioridadDiscapacidad->dominio_id,
-                'numero' => 13
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'apostilla',
+                'prioridad_ficha' => 'discapacidad',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioLegalizaciones->dominio_id,
-                'prioridad' => $prioridadDiscapacidad->dominio_id,
-                'numero' => 14
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'legalizaciones',
+                'prioridad_ficha' => 'discapacidad',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioVivencia->dominio_id,
-                'prioridad' => $prioridadDiscapacidad->dominio_id,
-                'numero' => 15
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'vivencia',
+                'prioridad_ficha' => 'discapacidad',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
             [
-                'tipo' => $tipoPrioridad->dominio_id,
-                'servicio' => $servicioDevoluciones->dominio_id,
-                'prioridad' => $prioridadDiscapacidad->dominio_id,
-                'numero' => 16
+                'fk_sesion_id' => $sesion->sesion_id,
+                'tipo_ficha' => 'prioritaria',
+                'tipo_servicio' => 'devoluciones',
+                'prioridad_ficha' => 'discapacidad',
+                'fecha_inicio' => now(),
+                'fecha_registro' => now(),
+                'cantidad_llamadas' => 0
             ],
         ];
 
         $fichasCreadas = [];
         foreach ($fichas as $fichaData) {
-            $fichasCreadas[] = Ficha::create([
-                'fk_sesion_id' => $sesion->sesion_id,
-                'fk_dominio_tipo_id' => $fichaData['tipo'],
-                'fk_tipo_ficha_id' => $fichaData['tipo'],
-                'fk_tipo_servicio_id' => $fichaData['servicio'],
-                'fk_prioridad_ficha_id' => $fichaData['prioridad'],
-                'numero' => $fichaData['numero'],
-                'fecha_inicio' => now(),
-                'fecha_registro' => now(),
-                'cantidad_llamadas' => 0
-            ]);
+            $fichasCreadas[] = $fichaService->crearFicha($fichaData);
         }
 
         // Crear llamadas y seguimientos para las primeras 4 fichas

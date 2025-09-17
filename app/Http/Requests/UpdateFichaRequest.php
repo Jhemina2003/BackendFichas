@@ -21,7 +21,6 @@ class UpdateFichaRequest extends FormRequest
             'fk_sesion_id' => 'sometimes|exists:sesiones,sesion_id',
             'tipo_ficha' => 'sometimes|string|in:' . implode(',', array_column(TipoFichaEnum::cases(), 'value')),
             'tipo_servicio' => 'sometimes|string|in:' . implode(',', array_column(TipoServicioEnum::cases(), 'value')),
-            'numero' => 'sometimes|integer',
             'fecha_inicio' => 'sometimes|date',
             'fecha_registro' => 'sometimes|date',
             'cantidad_llamadas' => 'sometimes|integer',

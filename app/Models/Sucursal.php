@@ -12,4 +12,9 @@ class Sucursal extends Model
     protected $primaryKey = 'sucursal_id';
     protected $guarded = [];
     public $timestamps = true;
+
+    public function organizacion()
+    {
+        return $this->belongsTo(\App\Models\Organizacion::class, 'fk_organizacion_id', 'organizacion_id');
+    }
 }

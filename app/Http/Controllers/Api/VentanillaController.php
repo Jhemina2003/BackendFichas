@@ -27,6 +27,40 @@ class VentanillaController extends Controller
         $ventanilla = $ventanillaService->crearVentanilla($request->validated());
         return response()->json($ventanilla, 201);
     }
+
+    /**
+     * Cierra una ventanilla (cambia estado a 'cerrada').
+     * POST /api/ventanillas/{id}/cerrar
+     */
+    public function cerrar($id)
+    {
+        $ventanilla = Ventanilla::findOrFail($id);
+        $ventanilla->estado = Ventanilla::ESTADO_CERRADA;
+        $ventanilla->save();
+        return response()->json(['message' => 'Ventanilla cerrada', 'ventanilla' => $ventanilla]);
+    }
+
+    /**
+     * Abre una ventanilla (cambia estado a 'abierta').
+     * POST /api/ventanillas/{id}/abrir
+     */
+    public function abrir($id)
+    {
+        $ventanilla = Ventanilla::findOrFail($id);
+        $ventanilla->estado = Ventanilla::ESTADO_ABIERTA;
+        $ventanilla->save();
+        return response()->json(['message' => 'Ventanilla abierta', 'ventanilla' => $ventanilla]);
+    }
+
+    /**
+     * Verifica si todas las ventanillas están cerradas.
+     * GET /api/ventanillas/todas-cerradas
+     */
+    public function todasCerradas()
+    {
+        $abiertas = Ventanilla::where('estado', Ventanilla::ESTADO_ABIERTA)->count();
+        return response()->json(['todas_cerradas' => $abiertas === 0]);
+    }
     public function update(\App\Http\Requests\UpdateVentanillaRequest $request, $id, VentanillaService $ventanillaService) {
         $ventanilla = Ventanilla::findOrFail($id);
         $ventanilla = $ventanillaService->actualizarVentanilla($ventanilla, $request->validated());

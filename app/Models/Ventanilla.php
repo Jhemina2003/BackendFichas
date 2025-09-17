@@ -12,4 +12,8 @@ class Ventanilla extends Model
     protected $primaryKey = 'ventanilla_id';
     protected $guarded = [];
     public $timestamps = true;
+
+    // Estados posibles: abierta, cerrada
+    const ESTADO_ABIERTA = 'abierta';
+    const ESTADO_CERRADA = 'cerrada';
 }

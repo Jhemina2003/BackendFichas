@@ -22,13 +22,9 @@ class StoreFichaRequest extends FormRequest
         public function rules()
         {
             return [
-                'fk_sesion_id' => 'required|exists:sesiones,sesion_id',
+                'fk_sucursal_id' => 'required|exists:sucursales,sucursal_id',
                 'tipo_ficha' => 'required|string|in:' . implode(',', array_column(TipoFichaEnum::cases(), 'value')),
                 'tipo_servicio' => 'required|string|in:' . implode(',', array_column(TipoServicioEnum::cases(), 'value')),
-                'numero' => 'required|integer',
-                'fecha_inicio' => 'required|date',
-                'fecha_registro' => 'required|date',
-                'cantidad_llamadas' => 'required|integer',
                 'prioridad_ficha' => 'required_if:tipo_ficha,prioritaria|string|in:' . implode(',', array_column(PrioridadFichaEnum::cases(), 'value')),
             ];
         }

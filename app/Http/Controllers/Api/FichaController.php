@@ -44,26 +44,40 @@ class FichaController extends Controller
                 $q->where('fk_sucursal_id', $request->sucursal_id);
             });
         }
-        return $query->get();
+    return $query->get();
     }
 
     public function store(\App\Http\Requests\StoreFichaRequest $request, FichaService $fichaService)
     {
         $ficha = $fichaService->crearFicha($request->validated());
-        return response()->json($ficha, 201);
+        $ficha = $ficha->fresh(['sesion.sucursal.organizacion']);
+
+        $organizacionNombre = $ficha->sesion && $ficha->sesion->sucursal && $ficha->sesion->sucursal->organizacion
+            ? $ficha->sesion->sucursal->organizacion->nombre
+            : null;
+        $sucursalNombre = $ficha->sesion && $ficha->sesion->sucursal
+            ? $ficha->sesion->sucursal->nombre
+            : null;
+
+        return response()->json([
+            'numero_formateado' => $ficha->numero_formateado,
+            'fecha_registro' => $ficha->fecha_registro,
+            'organizacion' => $organizacionNombre,
+            'sucursal' => $sucursalNombre,
+        ], 201);
     }
 
     public function show($id)
     {
-        return Ficha::findOrFail($id);
+    return Ficha::findOrFail($id);
     }
 
 
     public function update(\App\Http\Requests\UpdateFichaRequest $request, $id, FichaService $fichaService)
     {
-        $ficha = Ficha::findOrFail($id);
-        $ficha = $fichaService->actualizarFicha($ficha, $request->validated());
-        return response()->json($ficha);
+    $ficha = Ficha::findOrFail($id);
+    $ficha = $fichaService->actualizarFicha($ficha, $request->validated());
+    return response()->json($ficha->fresh());
     }
 
     public function destroy($id)

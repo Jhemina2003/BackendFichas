@@ -24,6 +24,7 @@ return new class extends Migration
              */
             $table->integer('numero');
             $table->boolean('bloqueado')->default(false);
+            $table->string('estado')->default('abierta'); // abierta | cerrada
             $table->timestamps();
         });
     }

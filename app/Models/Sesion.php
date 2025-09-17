@@ -12,4 +12,15 @@ class Sesion extends Model
     protected $primaryKey = 'sesion_id';
     protected $guarded = [];
     public $timestamps = true;
+
+    public function sucursal()
+    {
+        return $this->belongsTo(\App\Models\Sucursal::class, 'fk_sucursal_id', 'sucursal_id');
+    }
+
+    public function organizacion()
+    {
+        // Relación a través de sucursal
+        return $this->sucursal ? $this->sucursal->organizacion() : null;
+    }
 }

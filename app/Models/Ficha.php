@@ -12,6 +12,12 @@ class Ficha extends Model
     protected $primaryKey = 'ficha_id';
     protected $guarded = [];
     public $timestamps = true;
+    protected $appends = ['numero_formateado'];
+
+    public function sesion()
+    {
+        return $this->belongsTo(\App\Models\Sesion::class, 'fk_sesion_id', 'sesion_id');
+    }
 
     // Relaciones con dominios
     public function tipoFicha()
@@ -27,5 +33,22 @@ class Ficha extends Model
     public function prioridadFicha()
     {
         return $this->belongsTo(Dominio::class, 'fk_prioridad_ficha_id', 'dominio_id');
+    }
+
+    public function getNumeroFormateadoAttribute()
+    {
+        // Prefijos por tipo de servicio
+        $prefijos = [
+            'apostilla' => 'APOS',
+            'legalizaciones' => 'LEGAL',
+            'vivencia' => 'VIVENCIA',
+            'devoluciones' => 'DEV',
+        ];
+        $tipoServicio = $this->tipoServicio;
+        $tipoFicha = $this->tipoFicha;
+        $prefijo = $tipoServicio && isset($prefijos[$tipoServicio->nombre]) ? $prefijos[$tipoServicio->nombre] : 'FICHA';
+        $esPrioritaria = $tipoFicha && $tipoFicha->nombre === 'prioritaria';
+        $prefijoFinal = $esPrioritaria ? 'P.' . $prefijo : $prefijo;
+        return $prefijoFinal . '.' . $this->numero;
     }
 }

@@ -13,38 +13,55 @@ class FichaService
     public function crearFicha(array $data): Ficha
     {
         $data = $this->mapEnumsToDominioIds($data);
-        $data['numero'] = $this->generarNumeroFicha($data);
+        // Inicializar cantidad_llamadas en 0
+        $data['cantidad_llamadas'] = 0;
+
+        // Asignar fechas automáticamente
+        $now = now();
+        $data['fecha_registro'] = $now;
+        $data['fecha_inicio'] = $now;
+
+        // Asignar sesión automáticamente si no viene en el request
+        if (empty($data['fk_sesion_id']) && !empty($data['fk_sucursal_id'])) {
+            // Buscar dominio 'activa' para estado de sesión
+            $dominioActiva = \App\Models\Dominio::where('nombre', 'activa')->first();
+            $sesion = \App\Models\Sesion::where('fk_sucursal_id', $data['fk_sucursal_id'])
+                ->whereDate('fecha', $now->toDateString())
+                ->where('fk_dominio_estado_id', $dominioActiva ? $dominioActiva->dominio_id : null)
+                ->orderByDesc('fecha')
+                ->first();
+            if ($sesion) {
+                $data['fk_sesion_id'] = $sesion->sesion_id;
+            } else {
+                // Crear nueva sesión activa para la sucursal y día
+                $sesion = \App\Models\Sesion::create([
+                    'fk_sucursal_id' => $data['fk_sucursal_id'],
+                    'fecha' => $now,
+                    'hora_inicio' => $now,
+                    'fk_dominio_estado_id' => $dominioActiva ? $dominioActiva->dominio_id : null,
+                ]);
+                $data['fk_sesion_id'] = $sesion->sesion_id;
+            }
+        }
+
+        // Eliminar fk_sucursal_id porque no existe en la tabla fichas
+        unset($data['fk_sucursal_id']);
+
+        $data['numero'] = $this->generarCorrelativoFicha($data);
         return Ficha::create($data);
     }
     /**
-     * Genera el número correlativo de ficha con prefijo según el tipo de servicio y prioridad.
+     * Genera el número correlativo (integer) de ficha para el día, tipo y prioridad.
      */
-    private function generarNumeroFicha(array $data): string
+    private function generarCorrelativoFicha(array $data): int
     {
-        // Mapear tipo_servicio_id a prefijo
-        $prefijos = [
-            'apostilla' => 'APOS',
-            'legalizaciones' => 'LEGAL',
-            'vivencia' => 'VIVENCIA',
-            'devoluciones' => 'DEV',
-        ];
-        $tipoServicioDominio = \App\Models\Dominio::find($data['fk_tipo_servicio_id']);
-        $tipoServicioNombre = $tipoServicioDominio ? $tipoServicioDominio->nombre : '';
-        $prefijo = $prefijos[$tipoServicioNombre] ?? 'FICHA';
-
-        // Prefijo de prioridad
-        $esPrioritaria = isset($data['fk_tipo_ficha_id']) && \App\Models\Dominio::find($data['fk_tipo_ficha_id'])->nombre === 'prioritaria';
-        $prefijoFinal = $esPrioritaria ? 'P.' . $prefijo : $prefijo;
-
-        // Buscar el último número correlativo para ese tipo y prioridad
-        $query = \App\Models\Ficha::where('fk_tipo_servicio_id', $data['fk_tipo_servicio_id'])
-            ->where('fk_tipo_ficha_id', $data['fk_tipo_ficha_id']);
-        $ultimo = $query->orderByDesc('ficha_id')->first();
-        $correlativo = 1;
-        if ($ultimo && preg_match('/(\d+)$/', $ultimo->numero, $m)) {
-            $correlativo = intval($m[1]) + 1;
-        }
-        return $prefijoFinal . '.' . $correlativo;
+        $fecha = isset($data['fecha_registro']) ? date('Y-m-d', strtotime($data['fecha_registro'])) : date('Y-m-d');
+        // El correlativo es independiente para cada combinación de tipo de ficha y tipo de servicio, por día
+        $maxNumero = Ficha::where('fk_tipo_ficha_id', $data['fk_tipo_ficha_id'])
+            ->where('fk_tipo_servicio_id', $data['fk_tipo_servicio_id'])
+            ->whereDate('fecha_registro', $fecha)
+            ->max('numero');
+        return $maxNumero ? ($maxNumero + 1) : 1;
     }
 
     /**
@@ -58,7 +75,7 @@ class FichaService
         $cambioServicio = isset($data['fk_tipo_servicio_id']) && $data['fk_tipo_servicio_id'] != $ficha->fk_tipo_servicio_id;
         if ($cambioTipo || $cambioServicio) {
             $nuevoData = array_merge($ficha->toArray(), $data);
-            $data['numero'] = $this->generarNumeroFicha($nuevoData);
+            $data['numero'] = $this->generarCorrelativoFicha($nuevoData);
         }
         $ficha->update($data);
         return $ficha;
