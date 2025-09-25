@@ -93,6 +93,13 @@ Este backend implementa las siguientes reglas y optimizaciones:
 - `GET /api/roles` — Lista roles.
 - `GET /api/dominios` — Lista dominios (tipos, estados, prioridades, etc.).
 
+#### Sesiones
+- `GET /api/sesiones` — Lista sesiones (filtros: sucursal_id, estado, fecha).
+- `POST /api/sesiones` — Crea una sesión.
+- `PUT /api/sesiones/{id}` — Actualiza una sesión.
+- `DELETE /api/sesiones/{id}` — Elimina una sesión.
+- `POST /api/sesiones/{id}/reabrir` — Reabre una sesión cerrada (solo si no existe otra activa para la sucursal y fecha).
+
 ### Ejemplo de error de validación
 ```json
 {
@@ -161,6 +168,13 @@ Este backend implementa las siguientes reglas y optimizaciones:
 - `GET /api/fichas` — Lista fichas (filtros: sesión, tipo, prioridad, fecha, estado, usuario, sucursal).
 - `POST /api/fichas` — Crea una ficha.
 - `POST /api/fichas/{ficha}/reasignar` — Reasigna una ficha a otra ventanilla.
+
+#### Sesiones
+- `GET /api/sesiones` — Lista sesiones (filtros: sucursal_id, estado, fecha).
+- `POST /api/sesiones` — Crea una sesión.
+- `PUT /api/sesiones/{id}` — Actualiza una sesión.
+- `DELETE /api/sesiones/{id}` — Elimina una sesión.
+- `POST /api/sesiones/{id}/reabrir` — Reabre una sesión cerrada (solo si no existe otra activa para la sucursal y fecha).
 
 #### Ejemplo de respuesta de ventanilla
 ```json

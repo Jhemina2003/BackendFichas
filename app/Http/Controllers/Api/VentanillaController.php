@@ -34,7 +34,10 @@ class VentanillaController extends Controller
      */
     public function cerrar($id)
     {
-        $ventanilla = Ventanilla::findOrFail($id);
+        $ventanilla = Ventanilla::find($id);
+        if (!$ventanilla) {
+            return response()->json(['message' => 'No se encontró la ventanilla especificada.'], 404);
+        }
         $ventanilla->estado = Ventanilla::ESTADO_CERRADA;
         $ventanilla->save();
 
@@ -57,10 +60,14 @@ class VentanillaController extends Controller
                 $sesion->fk_dominio_estado_id = $dominioCerrada->dominio_id;
                 $sesion->hora_cierre = now();
                 $sesion->save();
+            } elseif (!$sesion) {
+                return response()->json(['message' => 'No se encontró una sesión activa para cerrar en la sucursal.'], 404);
+            } elseif (!$dominioCerrada) {
+                return response()->json(['message' => 'Error interno: No se encontró el dominio para el estado "cerrada". Contacte a soporte.'], 500);
             }
         }
 
-        return response()->json(['message' => 'Ventanilla cerrada', 'ventanilla' => $ventanilla]);
+        return response()->json(['message' => 'Ventanilla cerrada correctamente.', 'ventanilla' => $ventanilla]);
     }
 
     /**

@@ -10,8 +10,31 @@ use Illuminate\Http\Request;
 use App\Models\Sesion;
 use App\Services\SesionService;
 
-class SesionController extends Controller
-{
+class SesionController extends Controller {
+    /**
+     * Reabrir una sesión cerrada (solo si no existe otra activa para la sucursal y fecha)
+     */
+    public function reabrir($id, SesionService $sesionService)
+    {
+        $user = request()->user();
+        if (!$user) {
+            return response()->json(['message' => 'No autenticado.'], 401);
+        }
+        // Cargar roles y verificar si es admin o superadmin
+        $roles = $user->roles()->pluck('nombre')->map(fn($r) => strtolower($r))->toArray();
+        if (!in_array('administrador', $roles) && !in_array('superadministrador', $roles)) {
+            return response()->json(['message' => 'Solo administradores pueden reabrir la sesión.'], 403);
+        }
+        $sesion = \App\Models\Sesion::findOrFail($id);
+        try {
+            $sesion = $sesionService->reabrirSesion($sesion);
+            return response()->json($sesion);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 409);
+        }
+    }
     public function index(Request $request) {
         $query = Sesion::query();
         if ($request->has('sucursal_id')) {

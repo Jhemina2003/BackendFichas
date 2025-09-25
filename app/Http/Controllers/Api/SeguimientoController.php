@@ -21,6 +21,10 @@ class SeguimientoController extends Controller
             'justificativo' => 'required|string|min:5',
         ]);
         $ficha = $this->findFichaByIdOrNumero($fichaId);
+        $estadoActual = $ficha->estado_actual;
+        if ($estadoActual !== 'en_atencion') {
+            return response()->json(['message' => 'Solo se puede reasignar una ficha en estado "en_atencion".'], 409);
+        }
         $ventanillaDestino = \App\Models\Ventanilla::findOrFail($request->fk_ventanilla_destino_id);
         // Validar ventanilla destino abierta
         if ($ventanillaDestino->estado === 'cerrada') {
@@ -138,8 +142,11 @@ class SeguimientoController extends Controller
             'fk_ventanilla_id' => 'required|exists:ventanillas,ventanilla_id',
             'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
         ]);
-    $ficha = $this->findFichaByIdOrNumero($fichaId);
+        $ficha = $this->findFichaByIdOrNumero($fichaId);
         $estadoActual = $ficha->estado_actual;
+        if ($estadoActual !== 'en_atencion') {
+            return response()->json(['message' => 'Solo se puede finalizar una ficha en estado "en_atencion".'], 409);
+        }
         if ($estadoActual === 'cancelado') {
             return response()->json(['message' => 'No se puede finalizar una ficha que ya está cancelada.'], 409);
         }

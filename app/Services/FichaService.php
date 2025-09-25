@@ -21,28 +21,18 @@ class FichaService
         $data['fecha_registro'] = $now;
         $data['fecha_inicio'] = $now;
 
-        // Asignar sesión automáticamente si no viene en el request
+        // Validar que exista sesión activa para la sucursal y el día
         if (empty($data['fk_sesion_id']) && !empty($data['fk_sucursal_id'])) {
-            // Buscar dominio 'activa' para estado de sesión
             $dominioActiva = \App\Models\Dominio::where('nombre', 'activa')->first();
-
             $sesion = \App\Models\Sesion::where('fk_sucursal_id', $data['fk_sucursal_id'])
                 ->whereDate('fecha', $now->toDateString())
                 ->where('fk_dominio_estado_id', $dominioActiva ? $dominioActiva->dominio_id : null)
                 ->orderByDesc('fecha')
                 ->first();
-
             if ($sesion) {
                 $data['fk_sesion_id'] = $sesion->sesion_id;
             } else {
-                // Crear nueva sesión activa para la sucursal y día
-                $sesion = \App\Models\Sesion::create([
-                    'fk_sucursal_id' => $data['fk_sucursal_id'],
-                    'fecha' => $now,
-                    'hora_inicio' => $now,
-                    'fk_dominio_estado_id' => $dominioActiva ? $dominioActiva->dominio_id : null,
-                ]);
-                $data['fk_sesion_id'] = $sesion->sesion_id;
+                throw new \Exception('No se puede crear la ficha: no hay sesión activa para la sucursal en la fecha actual. Solicite al administrador que inicie la sesión del día.');
             }
         }
 

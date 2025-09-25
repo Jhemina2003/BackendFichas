@@ -19,6 +19,7 @@ Route::post('ventanillas/{id}/abrir', [App\Http\Controllers\Api\VentanillaContro
 Route::get('ventanillas/todas-cerradas', [App\Http\Controllers\Api\VentanillaController::class, 'todasCerradas']);
 Route::apiResource('sucursales', App\Http\Controllers\Api\SucursalController::class);
 Route::apiResource('organizaciones', App\Http\Controllers\Api\OrganizacionController::class);
+Route::post('sesiones/{id}/reabrir', [App\Http\Controllers\Api\SesionController::class, 'reabrir']);
 Route::apiResource('sesiones', App\Http\Controllers\Api\SesionController::class);
 Route::apiResource('seguimientos', App\Http\Controllers\Api\SeguimientoController::class)->only(['index', 'show', 'store']);
 // Acciones de atención sobre fichas

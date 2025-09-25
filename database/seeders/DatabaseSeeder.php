@@ -48,6 +48,7 @@ class DatabaseSeeder extends Seeder
     $prioridadEmbarazada = Dominio::create(['nombre' => 'embarazada', 'fk_dominio_grupo_id' => $prioridadFichaGrupo->dominio_grupo_id]);
     $prioridadTerceraEdad = Dominio::create(['nombre' => 'tercera_edad', 'fk_dominio_grupo_id' => $prioridadFichaGrupo->dominio_grupo_id]);
     $prioridadDiscapacidad = Dominio::create(['nombre' => 'discapacidad', 'fk_dominio_grupo_id' => $prioridadFichaGrupo->dominio_grupo_id]);
+    $prioridadConBebe = Dominio::create(['nombre' => 'con_bebe', 'fk_dominio_grupo_id' => $prioridadFichaGrupo->dominio_grupo_id]);
         
     // Dominios para estado_sesion
     $sesionActiva = Dominio::create(['nombre' => 'activa', 'fk_dominio_grupo_id' => $estadoSesionGrupo->dominio_grupo_id]);
