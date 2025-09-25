@@ -56,22 +56,24 @@ class DatabaseSeeder extends Seeder
     // Dominios para estado_seguimiento
     $seguimientoEspera = Dominio::create(['nombre' => 'en_espera', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
     $seguimientoLlamado = Dominio::create(['nombre' => 'llamado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
-    $seguimientoAtendido = Dominio::create(['nombre' => 'atendido', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
+    $seguimientoEnAtencion = Dominio::create(['nombre' => 'en_atencion', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
     $seguimientoFinalizado = Dominio::create(['nombre' => 'finalizado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
     $seguimientoCancelado = Dominio::create(['nombre' => 'cancelado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
+    $seguimientoAusente = Dominio::create(['nombre' => 'ausente', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
+    $seguimientoReasignado = Dominio::create(['nombre' => 'reasignado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
 
         // Sucursal
         $sucursal = Sucursal::create(['fk_organizacion_id' => $org->organizacion_id, 'nombre' => 'Sucursal La Paz']);
 
         // Ventanillas para diferentes servicios
-        $ventanilla1 = Ventanilla::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'numero' => 1, 'bloqueado' => false]);
-        $ventanilla2 = Ventanilla::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'numero' => 2, 'bloqueado' => false]);
-        $ventanilla3 = Ventanilla::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'numero' => 3, 'bloqueado' => false]);
+    $ventanilla1 = Ventanilla::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'numero' => 1, 'estado' => 'abierta']);
+    $ventanilla2 = Ventanilla::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'numero' => 2, 'estado' => 'abierta']);
+    $ventanilla3 = Ventanilla::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'numero' => 3, 'estado' => 'abierta']);
 
         // Roles
-        $rolOperador = Rol::create(['nombre' => 'Operador']);
-        $rolSupervisor = Rol::create(['nombre' => 'Supervisor']);
-        $rolAdministrador = Rol::create(['nombre' => 'Administrador']);
+    $rolSuperAdmin = Rol::firstOrCreate(['nombre' => 'Super Administrador']);
+    $rolAdministrador = Rol::firstOrCreate(['nombre' => 'Administrador']);
+    $rolOperador = Rol::firstOrCreate(['nombre' => 'Operador']);
 
         // Sesión activa
         $sesion = Sesion::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'fk_dominio_estado_id' => $sesionActiva->dominio_id, 'fecha' => now()]);
@@ -84,7 +86,8 @@ class DatabaseSeeder extends Seeder
             'nombre_completo' => 'Juan Pérez',
             'correo_electronico' => 'jperez@rree.gob.bo',
             'activo' => true,
-            'fk_persona_id' => 1
+            'fk_persona_id' => 1,
+            'fk_ventanilla_id' => $ventanilla1->ventanilla_id
         ]);
         $usuario2 = Usuario::create([
             'fk_sucursal_id' => $sucursal->sucursal_id,
@@ -93,7 +96,8 @@ class DatabaseSeeder extends Seeder
             'nombre_completo' => 'María López',
             'correo_electronico' => 'mlopez@rree.gob.bo',
             'activo' => true,
-            'fk_persona_id' => 2
+            'fk_persona_id' => 2,
+            'fk_ventanilla_id' => $ventanilla2->ventanilla_id
         ]);
 
         // Fichas de ejemplo cubriendo todas las combinaciones usando FichaService
@@ -262,14 +266,15 @@ class DatabaseSeeder extends Seeder
                 'fk_ficha_id' => $ficha->ficha_id,
                 'fecha' => now()
             ]);
+            // El seguimiento debe ser 'llamado' si ya fue llamada
             Seguimiento::create([
                 'fk_ficha_id' => $ficha->ficha_id,
                 'fk_ventanilla_id' => $ventanilla->ventanilla_id,
                 'fk_usuario_id' => $usuario->usuario_id,
-                'fk_dominio_estado_id' => $seguimientoEspera->dominio_id,
-                'fk_dominio_accion_id' => $seguimientoEspera->dominio_id,
+                'fk_dominio_estado_id' => $seguimientoLlamado->dominio_id,
+                'fk_dominio_accion_id' => $seguimientoLlamado->dominio_id,
                 'fecha' => now(),
-                'observacion' => 'Ficha registrada y en espera.'
+                'observacion' => 'Ficha llamada a ventanilla.'
             ]);
         }
 

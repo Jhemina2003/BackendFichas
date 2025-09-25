@@ -7,11 +7,50 @@ use Illuminate\Http\Request;
 use App\Models\Ficha;
 use App\Services\FichaService;
 
+
+
 class FichaController extends Controller
 {
+
+    /**
+     * Devuelve la cantidad de fichas en espera, finalizadas, ausentes y canceladas.
+     */
+    public function estadisticas()
+    {
+        try {
+            $estados = ['en_espera', 'finalizado', 'ausente', 'cancelado'];
+            $result = [];
+            $hoy = now()->toDateString();
+            $ventanillaId = request('ventanilla_id');
+            
+            foreach ($estados as $estado) {
+                // Buscar el dominio del estado
+                $dominio = \App\Models\Dominio::where('nombre', $estado)->first();
+                if (!$dominio) {
+                    $result[$estado] = 0;
+                    continue;
+                }
+                
+                // Contar seguimientos del día actual con este estado
+                $query = \App\Models\Seguimiento::where('fk_dominio_estado_id', $dominio->dominio_id)
+                    ->whereDate('fecha', $hoy);
+                    
+                if ($ventanillaId) {
+                    $query->where('fk_ventanilla_id', $ventanillaId);
+                }
+                
+                $result[$estado] = $query->count();
+            }
+            
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+// ...existing code...
     public function index(Request $request)
     {
-        $query = Ficha::query();
+    $query = Ficha::with(['usuario', 'sesion', 'tipoFicha', 'tipoServicio', 'prioridadFicha']);
         if ($request->has('sesion_id')) {
             $query->where('fk_sesion_id', $request->sesion_id);
         }
@@ -49,22 +88,28 @@ class FichaController extends Controller
 
     public function store(\App\Http\Requests\StoreFichaRequest $request, FichaService $fichaService)
     {
-        $ficha = $fichaService->crearFicha($request->validated());
-        $ficha = $ficha->fresh(['sesion.sucursal.organizacion']);
+        try {
+            $ficha = $fichaService->crearFicha($request->validated());
+            $ficha = $ficha->fresh(['sesion.sucursal.organizacion']);
 
-        $organizacionNombre = $ficha->sesion && $ficha->sesion->sucursal && $ficha->sesion->sucursal->organizacion
-            ? $ficha->sesion->sucursal->organizacion->nombre
-            : null;
-        $sucursalNombre = $ficha->sesion && $ficha->sesion->sucursal
-            ? $ficha->sesion->sucursal->nombre
-            : null;
+            $organizacionNombre = $ficha->sesion && $ficha->sesion->sucursal && $ficha->sesion->sucursal->organizacion
+                ? $ficha->sesion->sucursal->organizacion->nombre
+                : null;
+            $sucursalNombre = $ficha->sesion && $ficha->sesion->sucursal
+                ? $ficha->sesion->sucursal->nombre
+                : null;
 
-        return response()->json([
-            'numero_formateado' => $ficha->numero_formateado,
-            'fecha_registro' => $ficha->fecha_registro,
-            'organizacion' => $organizacionNombre,
-            'sucursal' => $sucursalNombre,
-        ], 201);
+            return response()->json([
+                'numero_formateado' => $ficha->numero_formateado,
+                'fecha_registro' => $ficha->fecha_registro,
+                'organizacion' => $organizacionNombre,
+                'sucursal' => $sucursalNombre,
+            ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['message' => 'Datos inválidos', 'errors' => $e->errors()], 400);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     public function show($id)
@@ -75,9 +120,17 @@ class FichaController extends Controller
 
     public function update(\App\Http\Requests\UpdateFichaRequest $request, $id, FichaService $fichaService)
     {
-    $ficha = Ficha::findOrFail($id);
-    $ficha = $fichaService->actualizarFicha($ficha, $request->validated());
-    return response()->json($ficha->fresh());
+        try {
+            $ficha = Ficha::findOrFail($id);
+            $ficha = $fichaService->actualizarFicha($ficha, $request->validated());
+            return response()->json($ficha->fresh());
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Ficha no encontrada'], 404);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['message' => 'Datos inválidos', 'errors' => $e->errors()], 400);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     public function destroy($id)

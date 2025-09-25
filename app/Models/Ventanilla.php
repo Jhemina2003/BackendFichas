@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Ventanilla extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $table = 'ventanillas';
     protected $primaryKey = 'ventanilla_id';
     protected $guarded = [];
@@ -16,4 +17,9 @@ class Ventanilla extends Model
     // Estados posibles: abierta, cerrada
     const ESTADO_ABIERTA = 'abierta';
     const ESTADO_CERRADA = 'cerrada';
+
+    public function sucursal()
+    {
+        return $this->belongsTo(\App\Models\Sucursal::class, 'fk_sucursal_id', 'sucursal_id');
+    }
 }

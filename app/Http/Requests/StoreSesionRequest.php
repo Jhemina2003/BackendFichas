@@ -20,9 +20,9 @@ class StoreSesionRequest extends FormRequest
     public function rules()
     {
         return [
-            'fk_sucursal_id' => 'required|exists:sucursales,sucursal_id',
-            'estado' => 'required|string|in:' . implode(',', array_column(EstadoSesionEnum::cases(), 'value')),
-            'fecha' => 'required|date',
+            'fk_sucursal_id' => 'sometimes|exists:sucursales,sucursal_id',
+            'estado' => 'sometimes|string|in:' . implode(',', array_column(EstadoSesionEnum::cases(), 'value')),
+            'fecha' => 'sometimes|date',
         ];
     }
 }

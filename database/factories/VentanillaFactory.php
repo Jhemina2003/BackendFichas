@@ -14,7 +14,7 @@ class VentanillaFactory extends Factory
         return [
             'fk_sucursal_id' => \App\Models\Sucursal::factory(),
             'numero' => $this->faker->randomDigitNotNull,
-            'bloqueado' => false,
+            'estado' => 'abierta',
         ];
     }
 }

@@ -34,8 +34,23 @@ class SesionController extends Controller
     }
     public function show($id) { return Sesion::findOrFail($id); }
     public function store(\App\Http\Requests\StoreSesionRequest $request, SesionService $sesionService) {
-        $sesion = $sesionService->crearSesion($request->validated());
-        return response()->json($sesion, 201);
+        try {
+            $data = $request->validated();
+            // Si no se envía sucursal, tomarla del usuario autenticado
+            if (empty($data['fk_sucursal_id']) && $request->user()) {
+                $data['fk_sucursal_id'] = $request->user()->fk_sucursal_id;
+            }
+            // Si no se envía fecha, usar la fecha actual
+            if (empty($data['fecha'])) {
+                $data['fecha'] = now();
+            }
+            $sesion = $sesionService->crearSesion($data);
+            return response()->json($sesion, 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 409);
+        }
     }
     public function update(\App\Http\Requests\UpdateSesionRequest $request, $id, SesionService $sesionService) {
         $sesion = Sesion::findOrFail($id);

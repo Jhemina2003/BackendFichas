@@ -17,8 +17,8 @@ return new class extends Migration
              */
             $table->id('seguimiento_id');
             $table->integer('fk_ficha_id');
-            $table->integer('fk_ventanilla_id');
-            $table->integer('fk_usuario_id');
+            $table->integer('fk_ventanilla_id')->nullable();
+            $table->integer('fk_usuario_id')->nullable();
             $table->integer('fk_dominio_estado_id');
             $table->integer('fk_dominio_accion_id');
             $table->foreign('fk_ficha_id')->references('ficha_id')->on('fichas');

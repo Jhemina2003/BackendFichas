@@ -10,12 +10,12 @@ use App\Services\VentanillaService;
 class VentanillaController extends Controller
 {
     public function index(Request $request) {
-        $query = Ventanilla::query();
+        $query = Ventanilla::with(['sucursal.organizacion']);
         if ($request->has('sucursal_id')) {
             $query->where('fk_sucursal_id', $request->sucursal_id);
         }
-        if ($request->has('bloqueado')) {
-            $query->where('bloqueado', $request->bloqueado);
+        if ($request->has('estado')) {
+            $query->where('estado', $request->estado);
         }
         if ($request->has('numero')) {
             $query->where('numero', $request->numero);
@@ -37,6 +37,29 @@ class VentanillaController extends Controller
         $ventanilla = Ventanilla::findOrFail($id);
         $ventanilla->estado = Ventanilla::ESTADO_CERRADA;
         $ventanilla->save();
+
+        // Verificar si todas las ventanillas de la sucursal están cerradas
+        $sucursalId = $ventanilla->fk_sucursal_id;
+        $abiertas = \App\Models\Ventanilla::where('fk_sucursal_id', $sucursalId)
+            ->where('estado', \App\Models\Ventanilla::ESTADO_ABIERTA)
+            ->count();
+
+        if ($abiertas === 0) {
+            // Cerrar la sesión activa de la sucursal para hoy
+            $dominioActiva = \App\Models\Dominio::where('nombre', 'activa')->first();
+            $dominioCerrada = \App\Models\Dominio::where('nombre', 'cerrada')->first();
+            $sesion = \App\Models\Sesion::where('fk_sucursal_id', $sucursalId)
+                ->whereDate('fecha', now()->toDateString())
+                ->where('fk_dominio_estado_id', $dominioActiva ? $dominioActiva->dominio_id : null)
+                ->orderByDesc('fecha')
+                ->first();
+            if ($sesion && $dominioCerrada) {
+                $sesion->fk_dominio_estado_id = $dominioCerrada->dominio_id;
+                $sesion->hora_cierre = now();
+                $sesion->save();
+            }
+        }
+
         return response()->json(['message' => 'Ventanilla cerrada', 'ventanilla' => $ventanilla]);
     }
 

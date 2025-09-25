@@ -25,11 +25,13 @@ class FichaService
         if (empty($data['fk_sesion_id']) && !empty($data['fk_sucursal_id'])) {
             // Buscar dominio 'activa' para estado de sesión
             $dominioActiva = \App\Models\Dominio::where('nombre', 'activa')->first();
+
             $sesion = \App\Models\Sesion::where('fk_sucursal_id', $data['fk_sucursal_id'])
                 ->whereDate('fecha', $now->toDateString())
                 ->where('fk_dominio_estado_id', $dominioActiva ? $dominioActiva->dominio_id : null)
                 ->orderByDesc('fecha')
                 ->first();
+
             if ($sesion) {
                 $data['fk_sesion_id'] = $sesion->sesion_id;
             } else {
@@ -48,7 +50,22 @@ class FichaService
         unset($data['fk_sucursal_id']);
 
         $data['numero'] = $this->generarCorrelativoFicha($data);
-        return Ficha::create($data);
+        $ficha = Ficha::create($data);
+
+        // Crear seguimiento inicial en_espera
+        $dominioEspera = \App\Models\Dominio::where('nombre', 'en_espera')->first();
+        if ($dominioEspera) {
+            \App\Models\Seguimiento::create([
+                'fk_ficha_id' => $ficha->ficha_id,
+                'fk_ventanilla_id' => null,
+                'fk_usuario_id' => null,
+                'fk_dominio_estado_id' => $dominioEspera->dominio_id,
+                'fk_dominio_accion_id' => $dominioEspera->dominio_id,
+                'fecha' => now(),
+                'observacion' => 'Ficha creada y en espera.'
+            ]);
+        }
+        return $ficha;
     }
     /**
      * Genera el número correlativo (integer) de ficha para el día, tipo y prioridad.

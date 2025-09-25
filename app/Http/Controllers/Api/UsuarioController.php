@@ -13,7 +13,7 @@ class UsuarioController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Usuario::query();
+    $query = Usuario::with(['ventanilla', 'sucursal']);
         if ($request->has('sucursal_id')) {
             $query->where('fk_sucursal_id', $request->sucursal_id);
         }

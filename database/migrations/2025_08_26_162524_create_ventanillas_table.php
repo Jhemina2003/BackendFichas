@@ -11,21 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ventanillas', function (Blueprint $table) {
+    Schema::create('ventanillas', function (Blueprint $table) {
             /**
              * References
              */
             $table->id('ventanilla_id');
-            $table->integer('fk_sucursal_id');
+            $table->integer('fk_sucursal_id')->index();
             $table->foreign('fk_sucursal_id')->references('sucursal_id')->on('sucursales');
 
             /**
              * Columnas
              */
             $table->integer('numero');
-            $table->boolean('bloqueado')->default(false);
-            $table->string('estado')->default('abierta'); // abierta | cerrada
+            $table->unique(['fk_sucursal_id', 'numero'], 'ventanilla_numero_unico_por_sucursal');
+            $table->enum('estado', ['abierta', 'cerrada'])->default('abierta');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

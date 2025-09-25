@@ -7,12 +7,27 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Ficha extends Model
 {
+
     use HasFactory;
     protected $table = 'fichas';
     protected $primaryKey = 'ficha_id';
     protected $guarded = [];
     public $timestamps = true;
-    protected $appends = ['numero_formateado'];
+    protected $appends = ['numero_formateado', 'estado_actual'];
+
+    public function getEstadoActualAttribute()
+    {
+        $ultimoSeguimiento = $this->seguimientos()->latest('created_at')->first();
+        if ($ultimoSeguimiento && $ultimoSeguimiento->dominioEstado) {
+            return $ultimoSeguimiento->dominioEstado->nombre;
+        }
+        return null;
+    }
+
+    public function seguimientos()
+    {
+        return $this->hasMany(\App\Models\Seguimiento::class, 'fk_ficha_id', 'ficha_id');
+    }
 
     public function sesion()
     {
@@ -33,6 +48,11 @@ class Ficha extends Model
     public function prioridadFicha()
     {
         return $this->belongsTo(Dominio::class, 'fk_prioridad_ficha_id', 'dominio_id');
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'fk_usuario_id', 'usuario_id');
     }
 
     public function getNumeroFormateadoAttribute()

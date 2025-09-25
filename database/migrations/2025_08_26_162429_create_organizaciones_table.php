@@ -20,9 +20,10 @@ return new class extends Migration
             /**
              * Columnas
              */
-            $table->string('nombre', 250);
+            $table->string('nombre', 250)->unique();
             $table->string('sigla', 10)->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

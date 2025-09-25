@@ -23,27 +23,49 @@ class LlamadaController extends Controller
      */
     public function llamarSiguiente(Request $request, LlamadaService $llamadaService)
     {
-        $request->validate([
-            'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
-            'fk_ventanilla_id' => 'required|exists:ventanillas,ventanilla_id',
-        ]);
-        $ficha = $this->filaFichaService->siguienteFichaEnEspera();
-        if (!$ficha) {
-            return response()->json(['message' => 'No hay fichas en espera'], 404);
+        try {
+            $request->validate([
+                'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
+                'fk_ventanilla_id' => 'required|exists:ventanillas,ventanilla_id',
+            ]);
+            $ficha = $this->filaFichaService->siguienteFichaEnEspera();
+            if (!$ficha) {
+                return response()->json(['message' => 'No hay fichas en espera'], 404);
+            }
+            // Validar que la ficha sigue en espera (concurrencia)
+            $estadoActual = $ficha->estado_actual;
+            if ($estadoActual !== 'en_espera') {
+                return response()->json(['message' => 'La ficha ya fue llamada o atendida por otro operador.'], 409);
+            }
+            // Crear la llamada
+            $llamada = $llamadaService->crearLlamada([
+                'fk_usuario_id' => $request->fk_usuario_id,
+                'fk_ventanilla_id' => $request->fk_ventanilla_id,
+                'fk_ficha_id' => $ficha->ficha_id,
+                'fecha' => now(),
+            ]);
+            // Cambiar el estado del seguimiento de la ficha a "llamado"
+            $dominioLlamado = \App\Models\Dominio::where('nombre', 'llamado')->first();
+            if ($dominioLlamado) {
+                \App\Models\Seguimiento::create([
+                    'fk_ficha_id' => $ficha->ficha_id,
+                    'fk_ventanilla_id' => $request->fk_ventanilla_id,
+                    'fk_usuario_id' => $request->fk_usuario_id,
+                    'fk_dominio_estado_id' => $dominioLlamado->dominio_id,
+                    'fk_dominio_accion_id' => $dominioLlamado->dominio_id,
+                    'fecha' => now(),
+                    'observacion' => 'Ficha llamada a ventanilla.'
+                ]);
+            }
+            return response()->json([
+                'llamada' => $llamada,
+                'ficha' => $ficha
+            ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['message' => 'Datos inválidos', 'errors' => $e->errors()], 400);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-        // Crear la llamada
-        $llamada = $llamadaService->crearLlamada([
-            'fk_usuario_id' => $request->fk_usuario_id,
-            'fk_ventanilla_id' => $request->fk_ventanilla_id,
-            'fk_ficha_id' => $ficha->ficha_id,
-            'fecha' => now(),
-        ]);
-        // (Opcional) Cambiar el estado del seguimiento de la ficha a "llamado"
-        // ...
-        return response()->json([
-            'llamada' => $llamada,
-            'ficha' => $ficha
-        ], 201);
     }
     public function index(Request $request)
     {
@@ -70,15 +92,29 @@ class LlamadaController extends Controller
 
     public function store(\App\Http\Requests\StoreLlamadaRequest $request, LlamadaService $llamadaService)
     {
-        $llamada = $llamadaService->crearLlamada($request->validated());
-        return response()->json($llamada, 201);
+        try {
+            $llamada = $llamadaService->crearLlamada($request->validated());
+            return response()->json($llamada, 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['message' => 'Datos inválidos', 'errors' => $e->errors()], 400);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     public function update(\App\Http\Requests\UpdateLlamadaRequest $request, $id, LlamadaService $llamadaService)
     {
-        $llamada = Llamada::findOrFail($id);
-        $llamada = $llamadaService->actualizarLlamada($llamada, $request->validated());
-        return response()->json($llamada);
+        try {
+            $llamada = Llamada::findOrFail($id);
+            $llamada = $llamadaService->actualizarLlamada($llamada, $request->validated());
+            return response()->json($llamada);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['message' => 'Llamada no encontrada'], 404);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['message' => 'Datos inválidos', 'errors' => $e->errors()], 400);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     public function destroy($id)

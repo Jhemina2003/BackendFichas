@@ -11,19 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('sucursales', function (Blueprint $table) {
+    Schema::create('sucursales', function (Blueprint $table) {
             /**
              * References
              */
             $table->id('sucursal_id');
-            $table->integer('fk_organizacion_id');
+            $table->integer('fk_organizacion_id')->index();
             $table->foreign('fk_organizacion_id')->references('organizacion_id')->on('organizaciones');
 
             /**
              * Columnas
              */
             $table->string('nombre', 250);
+            $table->unique(['fk_organizacion_id', 'nombre'], 'sucursal_nombre_unico_por_org');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
