@@ -24,7 +24,7 @@ class UpdateFichaRequest extends FormRequest
             'fecha_inicio' => 'sometimes|date',
             'fecha_registro' => 'sometimes|date',
             'cantidad_llamadas' => 'sometimes|integer',
-            'prioridad_ficha' => 'required_if:tipo_ficha,prioritaria|string|in:' . implode(',', array_column(PrioridadFichaEnum::cases(), 'value')),
+            'prioridad_ficha' => 'required_if:tipo_ficha,preferencial|string|in:' . implode(',', array_column(PrioridadFichaEnum::cases(), 'value')),
         ];
     }
 }

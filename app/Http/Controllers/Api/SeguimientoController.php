@@ -147,9 +147,6 @@ class SeguimientoController extends Controller
         if ($estadoActual !== 'en_atencion') {
             return response()->json(['message' => 'Solo se puede finalizar una ficha en estado "en_atencion".'], 409);
         }
-        if ($estadoActual === 'cancelado') {
-            return response()->json(['message' => 'No se puede finalizar una ficha que ya está cancelada.'], 409);
-        }
         try {
             // Buscar el dominio correspondiente
             $dominio = \App\Models\Dominio::where('nombre', 'finalizado')->first();
@@ -171,39 +168,6 @@ class SeguimientoController extends Controller
         return response()->json($seguimiento, 201);
     }
 
-    // Marcar ficha como cancelada (requiere observación)
-    public function marcarCancelada(Request $request, $fichaId, SeguimientoService $seguimientoService)
-    {
-        $request->validate([
-            'fk_ventanilla_id' => 'required|exists:ventanillas,ventanilla_id',
-            'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
-            'justificativo' => 'required|string|min:5',
-        ]);
-    $ficha = $this->findFichaByIdOrNumero($fichaId);
-        $estadoActual = $ficha->estado_actual;
-        if ($estadoActual === 'finalizado') {
-            return response()->json(['message' => 'No se puede cancelar una ficha que ya está finalizada.'], 409);
-        }
-        try {
-            // Buscar el dominio correspondiente
-            $dominio = \App\Models\Dominio::where('nombre', 'cancelado')->first();
-            if (!$dominio) {
-                return response()->json(['message' => "No existe un dominio con nombre 'cancelado' para el estado de la ficha."], 422);
-            }
-            $seguimiento = $seguimientoService->crearSeguimiento([
-                'fk_ficha_id' => $fichaId,
-                'fk_ventanilla_id' => $request->fk_ventanilla_id,
-                'fk_usuario_id' => $request->fk_usuario_id,
-                'estado' => 'cancelado',
-                'fk_dominio_accion_id' => $dominio->dominio_id,
-                'fecha' => now(),
-                'observacion' => $request->justificativo
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
-        return response()->json($seguimiento, 201);
-    }
     public function index(Request $request) {
         $query = Seguimiento::query();
         if ($request->has('ventanilla_id')) {

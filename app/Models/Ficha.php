@@ -45,10 +45,6 @@ class Ficha extends Model
         return $this->belongsTo(Dominio::class, 'fk_tipo_servicio_id', 'dominio_id');
     }
 
-    public function prioridadFicha()
-    {
-        return $this->belongsTo(Dominio::class, 'fk_prioridad_ficha_id', 'dominio_id');
-    }
 
     public function usuario()
     {
@@ -57,18 +53,12 @@ class Ficha extends Model
 
     public function getNumeroFormateadoAttribute()
     {
-        // Prefijos por tipo de servicio
-        $prefijos = [
-            'apostilla' => 'APOS',
-            'legalizaciones' => 'LEGAL',
-            'vivencia' => 'VIVENCIA',
-            'devoluciones' => 'DEV',
-        ];
         $tipoServicio = $this->tipoServicio;
         $tipoFicha = $this->tipoFicha;
-        $prefijo = $tipoServicio && isset($prefijos[$tipoServicio->nombre]) ? $prefijos[$tipoServicio->nombre] : 'FICHA';
-        $esPrioritaria = $tipoFicha && $tipoFicha->nombre === 'prioritaria';
-        $prefijoFinal = $esPrioritaria ? 'P.' . $prefijo : $prefijo;
-        return $prefijoFinal . '.' . $this->numero;
+        $nombreServicio = $tipoServicio ? strtoupper($tipoServicio->nombre) : 'FICHA';
+        $prefijo = substr($nombreServicio, 0, 4);
+    $esPreferencial = $this->tipoFicha && $this->tipoFicha->nombre === 'preferencial';
+    $prefijoFinal = $esPreferencial ? 'P.' . $prefijo : $prefijo;
+    return $prefijoFinal . '.' . $this->numero;
     }
 }

@@ -13,12 +13,12 @@ class FichaController extends Controller
 {
 
     /**
-     * Devuelve la cantidad de fichas en espera, finalizadas, ausentes y canceladas.
+     * Devuelve la cantidad de fichas en espera, finalizadas y ausentes.
      */
     public function estadisticas()
     {
         try {
-            $estados = ['en_espera', 'finalizado', 'ausente', 'cancelado'];
+            $estados = ['en_espera', 'finalizado', 'ausente'];
             $result = [];
             $hoy = now()->toDateString();
             $ventanillaId = request('ventanilla_id');
@@ -50,7 +50,7 @@ class FichaController extends Controller
 // ...existing code...
     public function index(Request $request)
     {
-    $query = Ficha::with(['usuario', 'sesion', 'tipoFicha', 'tipoServicio', 'prioridadFicha']);
+    $query = Ficha::with(['usuario', 'sesion', 'tipoFicha', 'tipoServicio']);
         if ($request->has('sesion_id')) {
             $query->where('fk_sesion_id', $request->sesion_id);
         }
@@ -59,9 +59,6 @@ class FichaController extends Controller
         }
         if ($request->has('tipo_servicio_id')) {
             $query->where('fk_tipo_servicio_id', $request->tipo_servicio_id);
-        }
-        if ($request->has('prioridad_ficha_id')) {
-            $query->where('fk_prioridad_ficha_id', $request->prioridad_ficha_id);
         }
         if ($request->has('fecha')) {
             $query->whereDate('fecha_registro', $request->fecha);

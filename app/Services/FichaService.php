@@ -99,11 +99,6 @@ class FichaService
                 $data['fk_tipo_ficha_id'] = $dominio->dominio_id;
                 $data['fk_dominio_tipo_id'] = $dominio->dominio_id;
             }
-            // Si la ficha es normal, eliminar prioridad_ficha (no debe tener prioridad)
-            if ($data['tipo_ficha'] === 'normal') {
-                unset($data['prioridad_ficha']);
-                $data['fk_prioridad_ficha_id'] = null;
-            }
             unset($data['tipo_ficha']);
         }
         if (isset($data['tipo_servicio'])) {
@@ -114,11 +109,6 @@ class FichaService
             unset($data['tipo_servicio']);
         }
         if (isset($data['prioridad_ficha'])) {
-            $dominio = Dominio::where('nombre', $data['prioridad_ficha'])->first();
-            if ($dominio) {
-                $data['fk_prioridad_ficha_id'] = $dominio->dominio_id;
-            }
-            unset($data['prioridad_ficha']);
         }
         return $data;
     }

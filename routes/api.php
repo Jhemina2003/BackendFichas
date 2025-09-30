@@ -25,7 +25,6 @@ Route::apiResource('seguimientos', App\Http\Controllers\Api\SeguimientoControlle
 // Acciones de atención sobre fichas
 Route::post('fichas/{ficha}/en-atencion', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarEnAtencion']);
 Route::post('fichas/{ficha}/finalizar', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarFinalizada']);
-Route::post('fichas/{ficha}/cancelar', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarCancelada']);
 Route::post('fichas/{ficha}/ausente', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarAusente']);
 Route::post('fichas/{ficha}/reasignar', [App\Http\Controllers\Api\SeguimientoController::class, 'reasignarFicha']);
 Route::get('fichas/{ficha}/historial', [App\Http\Controllers\Api\SeguimientoController::class, 'historial']);

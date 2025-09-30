@@ -8,7 +8,6 @@ enum EstadoSeguimientoEnum: string
     case LLAMADO = 'llamado';
     case EN_ATENCION = 'en_atencion';
     case FINALIZADO = 'finalizado';
-    case CANCELADO = 'cancelado';
     case AUSENTE = 'ausente';
     case REASIGNADO = 'reasignado';
 }
