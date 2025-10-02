@@ -28,9 +28,10 @@ class LlamadaController extends Controller
                 'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
                 'fk_ventanilla_id' => 'required|exists:ventanillas,ventanilla_id',
             ]);
-            $ficha = $this->filaFichaService->siguienteFichaEnEspera();
+            $ventanillaId = $request->fk_ventanilla_id;
+            $ficha = $this->filaFichaService->siguienteFichaEnEsperaPorVentanilla($ventanillaId);
             if (!$ficha) {
-                return response()->json(['message' => 'No hay fichas en espera'], 404);
+                return response()->json(['message' => 'No hay fichas en espera para los servicios activos de esta ventanilla'], 404);
             }
             // Validar que la ficha sigue en espera (concurrencia)
             $estadoActual = $ficha->estado_actual;
@@ -40,7 +41,7 @@ class LlamadaController extends Controller
             // Crear la llamada
             $llamada = $llamadaService->crearLlamada([
                 'fk_usuario_id' => $request->fk_usuario_id,
-                'fk_ventanilla_id' => $request->fk_ventanilla_id,
+                'fk_ventanilla_id' => $ventanillaId,
                 'fk_ficha_id' => $ficha->ficha_id,
                 'fecha' => now(),
             ]);
@@ -49,7 +50,7 @@ class LlamadaController extends Controller
             if ($dominioLlamado) {
                 \App\Models\Seguimiento::create([
                     'fk_ficha_id' => $ficha->ficha_id,
-                    'fk_ventanilla_id' => $request->fk_ventanilla_id,
+                    'fk_ventanilla_id' => $ventanillaId,
                     'fk_usuario_id' => $request->fk_usuario_id,
                     'fk_dominio_estado_id' => $dominioLlamado->dominio_id,
                     'fk_dominio_accion_id' => $dominioLlamado->dominio_id,

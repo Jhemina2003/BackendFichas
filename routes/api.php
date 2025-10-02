@@ -1,3 +1,5 @@
+// Dashboard de ventanilla (protegido)
+Route::middleware('auth:sanctum')->get('ventanilla/dashboard', [App\Http\Controllers\Api\VentanillaDashboardController::class, 'dashboard']);
 <?php
 
 use Illuminate\Support\Facades\Route;
@@ -29,3 +31,15 @@ Route::post('fichas/{ficha}/ausente', [App\Http\Controllers\Api\SeguimientoContr
 Route::post('fichas/{ficha}/reasignar', [App\Http\Controllers\Api\SeguimientoController::class, 'reasignarFicha']);
 Route::get('fichas/{ficha}/historial', [App\Http\Controllers\Api\SeguimientoController::class, 'historial']);
 Route::apiResource('asignaciones', App\Http\Controllers\Api\AsignacionController::class);
+
+// Rutas de autenticación Sanctum
+Route::post('login', [App\Http\Controllers\Api\AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->post('logout', [App\Http\Controllers\Api\AuthController::class, 'logout']);
+
+
+// Rutas para servicios activos de la ventanilla asignada al usuario autenticado
+Route::middleware('auth:sanctum')->get('mis-servicios-ventanilla', [App\Http\Controllers\Api\ServicioVentanillaController::class, 'index']);
+Route::middleware('auth:sanctum')->put('mis-servicios-ventanilla', [App\Http\Controllers\Api\ServicioVentanillaController::class, 'update']);
+
+// Puedes proteger rutas así:
+// Route::middleware('auth:sanctum')->get('usuario', function (Request $request) { return $request->user(); });

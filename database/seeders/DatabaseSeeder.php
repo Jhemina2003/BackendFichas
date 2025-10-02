@@ -24,12 +24,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Organizaciones
-        $org = Organizacion::create(['nombre' => 'Ministerio de Relaciones Exteriores']);
 
         // Grupos de dominio específicos para el sistema de legalizaciones
         $tipoFichaGrupo = DominioGrupo::create(['nombre' => 'tipo_ficha']);
-        $tipoServicioGrupo = DominioGrupo::create(['nombre' => 'tipo_servicio']);
         $estadoSesionGrupo = DominioGrupo::create(['nombre' => 'estado_sesion']);
         $estadoSeguimientoGrupo = DominioGrupo::create(['nombre' => 'estado_seguimiento']);
 
@@ -37,11 +34,6 @@ class DatabaseSeeder extends Seeder
     $tipoNormal = Dominio::create(['nombre' => 'normal', 'fk_dominio_grupo_id' => $tipoFichaGrupo->dominio_grupo_id]);
     $tipoPreferencial = Dominio::create(['nombre' => 'preferencial', 'fk_dominio_grupo_id' => $tipoFichaGrupo->dominio_grupo_id]);
         
-    // Dominios para tipo_servicio (servicios del ministerio)
-    $servicioApostilla = Dominio::create(['nombre' => 'apostilla', 'fk_dominio_grupo_id' => $tipoServicioGrupo->dominio_grupo_id]);
-    $servicioLegalizaciones = Dominio::create(['nombre' => 'legalizaciones', 'fk_dominio_grupo_id' => $tipoServicioGrupo->dominio_grupo_id]);
-    $servicioVivencia = Dominio::create(['nombre' => 'vivencia', 'fk_dominio_grupo_id' => $tipoServicioGrupo->dominio_grupo_id]);
-    $servicioDevoluciones = Dominio::create(['nombre' => 'devoluciones', 'fk_dominio_grupo_id' => $tipoServicioGrupo->dominio_grupo_id]);
         
     // Dominios para prioridad_ficha
         
@@ -57,119 +49,48 @@ class DatabaseSeeder extends Seeder
     $seguimientoAusente = Dominio::create(['nombre' => 'ausente', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
     $seguimientoReasignado = Dominio::create(['nombre' => 'reasignado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
 
-        // Sucursal
-        $sucursal = Sucursal::create(['fk_organizacion_id' => $org->organizacion_id, 'nombre' => 'Sucursal La Paz']);
+        // Organización principal
+        $org = Organizacion::create(['nombre' => 'Unidad Apostilla y Legalizaciones']);
 
-        // Ventanillas para diferentes servicios
-    $ventanilla1 = Ventanilla::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'numero' => 1, 'estado' => 'abierta']);
-    $ventanilla2 = Ventanilla::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'numero' => 2, 'estado' => 'abierta']);
-    $ventanilla3 = Ventanilla::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'numero' => 3, 'estado' => 'abierta']);
+        // Sucursal Santa Cruz
+        $sucursal = Sucursal::create(['fk_organizacion_id' => $org->organizacion_id, 'nombre' => 'Santa Cruz']);
 
-        // Roles
-    $rolSuperAdmin = Rol::firstOrCreate(['nombre' => 'Super Administrador']);
-    $rolAdministrador = Rol::firstOrCreate(['nombre' => 'Administrador']);
-    $rolOperador = Rol::firstOrCreate(['nombre' => 'Operador']);
-
-        // Sesión activa
-        $sesion = Sesion::create(['fk_sucursal_id' => $sucursal->sucursal_id, 'fk_dominio_estado_id' => $sesionActiva->dominio_id, 'fecha' => now()]);
-
-        // Usuarios
-        $usuario1 = Usuario::create([
-            'fk_sucursal_id' => $sucursal->sucursal_id,
-            'fk_dominio_tipo_servicio_id' => $servicioApostilla->dominio_id,
-            'usuario' => 'jperez',
-            'nombre_completo' => 'Juan Pérez',
-            'correo_electronico' => 'jperez@rree.gob.bo',
-            'activo' => true,
-            'fk_persona_id' => 1,
-            'fk_ventanilla_id' => $ventanilla1->ventanilla_id
-        ]);
-        $usuario2 = Usuario::create([
-            'fk_sucursal_id' => $sucursal->sucursal_id,
-            'fk_dominio_tipo_servicio_id' => $servicioLegalizaciones->dominio_id,
-            'usuario' => 'mlopez',
-            'nombre_completo' => 'María López',
-            'correo_electronico' => 'mlopez@rree.gob.bo',
-            'activo' => true,
-            'fk_persona_id' => 2,
-            'fk_ventanilla_id' => $ventanilla2->ventanilla_id
-        ]);
-
-        // Fichas de ejemplo cubriendo todas las combinaciones usando FichaService
-        $fichaService = new \App\Services\FichaService();
-        
-        $fichas = [
-            // Fichas normales (sin prioridad)
-            [
-                'fk_sesion_id' => $sesion->sesion_id,
-                'tipo_ficha' => 'normal',
-                'tipo_servicio' => 'apostilla',
-                'fecha_inicio' => now(),
-                'fecha_registro' => now(),
-                'cantidad_llamadas' => 0
-            ],
-            [
-                'fk_sesion_id' => $sesion->sesion_id,
-                'tipo_ficha' => 'normal',
-                'tipo_servicio' => 'legalizaciones',
-                'fecha_inicio' => now(),
-                'fecha_registro' => now(),
-                'cantidad_llamadas' => 0
-            ],
-            [
-                'fk_sesion_id' => $sesion->sesion_id,
-                'tipo_ficha' => 'normal',
-                'tipo_servicio' => 'vivencia',
-                'fecha_inicio' => now(),
-                'fecha_registro' => now(),
-                'cantidad_llamadas' => 0
-            ],
-            [
-                'fk_sesion_id' => $sesion->sesion_id,
-                'tipo_ficha' => 'normal',
-                'tipo_servicio' => 'devoluciones',
-                'fecha_inicio' => now(),
-                'fecha_registro' => now(),
-                'cantidad_llamadas' => 0
-            ],
-        ];
-
-        $fichasCreadas = [];
-        foreach ($fichas as $fichaData) {
-            $fichasCreadas[] = $fichaService->crearFicha($fichaData);
-        }
-
-        // Crear llamadas y seguimientos para las primeras 4 fichas
-        for ($i = 0; $i < 4; $i++) {
-            $ficha = $fichasCreadas[$i];
-            $usuario = ($i % 2 === 0) ? $usuario1 : $usuario2;
-            $ventanilla = ($i % 2 === 0) ? $ventanilla1 : $ventanilla2;
-            $llamada = Llamada::create([
-                'fk_usuario_id' => $usuario->usuario_id,
-                'fk_ventanilla_id' => $ventanilla->ventanilla_id,
-                'fk_ficha_id' => $ficha->ficha_id,
-                'fecha' => now()
-            ]);
-            // El seguimiento debe ser 'llamado' si ya fue llamada
-            Seguimiento::create([
-                'fk_ficha_id' => $ficha->ficha_id,
-                'fk_ventanilla_id' => $ventanilla->ventanilla_id,
-                'fk_usuario_id' => $usuario->usuario_id,
-                'fk_dominio_estado_id' => $seguimientoLlamado->dominio_id,
-                'fk_dominio_accion_id' => $seguimientoLlamado->dominio_id,
-                'fecha' => now(),
-                'observacion' => 'Ficha llamada a ventanilla.'
+        // Crear 10 ventanillas (inicialmente cerradas)
+        $ventanillas = [];
+        for ($i = 1; $i <= 10; $i++) {
+            $ventanillas[$i] = Ventanilla::create([
+                'fk_sucursal_id' => $sucursal->sucursal_id,
+                'numero' => $i,
+                'estado' => \App\Enums\EstadoVentanillaEnum::CERRADA->value
             ]);
         }
 
-        // RolUsuario
-        RolUsuario::create([
-            'fk_usuario_id' => $usuario1->usuario_id,
-            'fk_rol_id' => $rolOperador->rol_id
-        ]);
-        RolUsuario::create([
-            'fk_usuario_id' => $usuario2->usuario_id,
-            'fk_rol_id' => $rolOperador->rol_id
+        // Crear 10 usuarios ventanilla con contraseña genérica 'ventanillaX123'
+        for ($i = 1; $i <= 10; $i++) {
+            Usuario::create([
+                'fk_sucursal_id' => $sucursal->sucursal_id,
+                // 'fk_dominio_tipo_servicio_id' => null, // Eliminado, ya no se usa
+                'usuario' => 'ventanilla' . $i,
+                'nombre_completo' => 'Ventanilla ' . $i,
+                'correo_electronico' => 'ventanilla' . $i . '@ejemplo.com',
+                'password' => bcrypt('ventanilla' . $i . '123'),
+                'activo' => true,
+                'fk_persona_id' => 100 + $i,
+                'fk_ventanilla_id' => $ventanillas[$i]->ventanilla_id
+            ]);
+        }
+
+        // Usuario extra 'fichas' (sin ventanilla asignada, contraseña: fichas123)
+        Usuario::create([
+            'fk_sucursal_id' => $sucursal->sucursal_id,
+            // 'fk_dominio_tipo_servicio_id' => null, // Eliminado, ya no se usa
+            'usuario' => 'fichas',
+            'nombre_completo' => 'Usuario Fichas',
+            'correo_electronico' => 'fichas@ejemplo.com',
+            'password' => bcrypt('fichas123'),
+            'activo' => true,
+            'fk_persona_id' => 999,
+            'fk_ventanilla_id' => null
         ]);
     }
 }

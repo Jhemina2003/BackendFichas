@@ -12,13 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('fichas', function (Blueprint $table) {
-            // Agregar campos para dominios
+            // Mantener solo tipo_ficha si es necesario, eliminar tipo_servicio
             $table->integer('fk_tipo_ficha_id')->nullable()->after('ficha_id');
-            $table->integer('fk_tipo_servicio_id')->nullable()->after('fk_tipo_ficha_id');
-            
-            // Agregar foreign keys
             $table->foreign('fk_tipo_ficha_id')->references('dominio_id')->on('dominios');
-            $table->foreign('fk_tipo_servicio_id')->references('dominio_id')->on('dominios');
+            // El campo fk_servicio_id debe estar en la migración principal de fichas si no existe
         });
     }
 
@@ -28,12 +25,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('fichas', function (Blueprint $table) {
-            // Eliminar foreign keys primero
+            // Eliminar foreign key y columna de tipo_ficha
             $table->dropForeign(['fk_tipo_ficha_id']);
-            $table->dropForeign(['fk_tipo_servicio_id']);
-            
-            // Eliminar columnas
-            $table->dropColumn(['fk_tipo_ficha_id', 'fk_tipo_servicio_id']);
+            $table->dropColumn(['fk_tipo_ficha_id']);
+            // El campo fk_servicio_id debe eliminarse en la migración correspondiente si es necesario
         });
     }
 };

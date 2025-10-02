@@ -34,15 +34,17 @@ class Ficha extends Model
         return $this->belongsTo(\App\Models\Sesion::class, 'fk_sesion_id', 'sesion_id');
     }
 
-    // Relaciones con dominios
+
+    // Relación con tipo de ficha (puede mantenerse si aún se usa)
     public function tipoFicha()
     {
         return $this->belongsTo(Dominio::class, 'fk_tipo_ficha_id', 'dominio_id');
     }
 
-    public function tipoServicio()
+    // Nueva relación: Servicio
+    public function servicio()
     {
-        return $this->belongsTo(Dominio::class, 'fk_tipo_servicio_id', 'dominio_id');
+        return $this->belongsTo(Servicio::class, 'fk_servicio_id', 'servicio_id');
     }
 
 
@@ -53,12 +55,12 @@ class Ficha extends Model
 
     public function getNumeroFormateadoAttribute()
     {
-        $tipoServicio = $this->tipoServicio;
+        $servicio = $this->servicio;
         $tipoFicha = $this->tipoFicha;
-        $nombreServicio = $tipoServicio ? strtoupper($tipoServicio->nombre) : 'FICHA';
+        $nombreServicio = $servicio ? strtoupper($servicio->nombre) : 'FICHA';
         $prefijo = substr($nombreServicio, 0, 4);
-    $esPreferencial = $this->tipoFicha && $this->tipoFicha->nombre === 'preferencial';
-    $prefijoFinal = $esPreferencial ? 'P.' . $prefijo : $prefijo;
-    return $prefijoFinal . '.' . $this->numero;
+        $esPreferencial = $this->tipoFicha && $this->tipoFicha->nombre === 'preferencial';
+        $prefijoFinal = $esPreferencial ? 'P.' . $prefijo : $prefijo;
+        return $prefijoFinal . '.' . $this->numero;
     }
 }

@@ -15,10 +15,10 @@ return new class extends Migration
             // Referencias
             $table->id('ficha_id');
             $table->integer('fk_sesion_id');
-            $table->integer('fk_dominio_tipo_id');
+            $table->unsignedBigInteger('fk_servicio_id');
             $table->integer('fk_llamada_id')->nullable();
             $table->foreign('fk_sesion_id')->references('sesion_id')->on('sesiones');
-            $table->foreign('fk_dominio_tipo_id')->references('dominio_id')->on('dominios');
+            $table->foreign('fk_servicio_id')->references('servicio_id')->on('servicios');
             // La relación foránea fk_llamada_id se agregará en migración separada
 
             // Columnas

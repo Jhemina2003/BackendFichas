@@ -63,9 +63,9 @@ class FichaService
     private function generarCorrelativoFicha(array $data): int
     {
         $fecha = isset($data['fecha_registro']) ? date('Y-m-d', strtotime($data['fecha_registro'])) : date('Y-m-d');
-        // El correlativo es independiente para cada combinación de tipo de ficha y tipo de servicio, por día
+        // El correlativo es independiente para cada combinación de tipo de ficha y servicio, por día
         $maxNumero = Ficha::where('fk_tipo_ficha_id', $data['fk_tipo_ficha_id'])
-            ->where('fk_tipo_servicio_id', $data['fk_tipo_servicio_id'])
+            ->where('fk_servicio_id', $data['fk_servicio_id'])
             ->whereDate('fecha_registro', $fecha)
             ->max('numero');
         return $maxNumero ? ($maxNumero + 1) : 1;
@@ -101,13 +101,7 @@ class FichaService
             }
             unset($data['tipo_ficha']);
         }
-        if (isset($data['tipo_servicio'])) {
-            $dominio = Dominio::where('nombre', $data['tipo_servicio'])->first();
-            if ($dominio) {
-                $data['fk_tipo_servicio_id'] = $dominio->dominio_id;
-            }
-            unset($data['tipo_servicio']);
-        }
+        // tipo_servicio eliminado, ahora se debe usar fk_servicio_id directamente
         if (isset($data['prioridad_ficha'])) {
         }
         return $data;
