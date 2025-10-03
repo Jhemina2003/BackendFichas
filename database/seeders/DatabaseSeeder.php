@@ -23,6 +23,21 @@ class DatabaseSeeder extends Seeder
      * Seed the application's database.
      */
     public function run(): void
+        // Poblar servicios base para la sucursal y ventanilla 1
+        $serviciosBase = ['apostilla', 'legalizaciones', 'vivencia', 'devoluciones'];
+        foreach ($serviciosBase as $nombreServicio) {
+            $dominioServicio = Dominio::where('nombre', $nombreServicio)->first();
+            if ($dominioServicio) {
+                \DB::table('servicios')->insert([
+                    'nombre' => $nombreServicio,
+                    'fk_ventanilla_id' => $ventanillas[1]->ventanilla_id, // Puedes cambiar a otra ventanilla si lo deseas
+                    'fk_dominio_tipo_servicio_id' => $dominioServicio->dominio_id,
+                    'fecha' => now()->toDateString(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
     {
 
         // Grupos de dominio específicos para el sistema de legalizaciones
@@ -92,5 +107,21 @@ class DatabaseSeeder extends Seeder
             'fk_persona_id' => 999,
             'fk_ventanilla_id' => null
         ]);
+
+        // Poblar servicios base para la sucursal y ventanilla 1
+        $serviciosBase = ['apostilla', 'legalizaciones', 'vivencia', 'devoluciones'];
+        foreach ($serviciosBase as $nombreServicio) {
+            $dominioServicio = Dominio::where('nombre', $nombreServicio)->first();
+            if ($dominioServicio) {
+                \DB::table('servicios')->insert([
+                    'nombre' => $nombreServicio,
+                    'fk_ventanilla_id' => $ventanillas[1]->ventanilla_id, // Puedes cambiar a otra ventanilla si lo deseas
+                    'fk_dominio_tipo_servicio_id' => $dominioServicio->dominio_id,
+                    'fecha' => now()->toDateString(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
     }
 }

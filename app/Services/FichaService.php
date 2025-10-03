@@ -13,6 +13,15 @@ class FichaService
     public function crearFicha(array $data): Ficha
     {
         $data = $this->mapEnumsToDominioIds($data);
+        // Mapear tipo_servicio a fk_servicio_id
+        if (isset($data['tipo_servicio'])) {
+            $servicio = \App\Models\Servicio::whereRaw('LOWER(nombre) = ?', [strtolower($data['tipo_servicio'])])->first();
+            if (!$servicio) {
+                throw new \Exception('No se encontró el servicio solicitado: ' . $data['tipo_servicio']);
+            }
+            $data['fk_servicio_id'] = $servicio->servicio_id;
+            unset($data['tipo_servicio']);
+        }
         // Inicializar cantidad_llamadas en 0
         $data['cantidad_llamadas'] = 0;
 
