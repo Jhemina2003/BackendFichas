@@ -37,6 +37,11 @@ Route::post('login', [App\Http\Controllers\Api\AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('logout', [App\Http\Controllers\Api\AuthController::class, 'logout']);
 
 
+
+// Rutas para sesiones de ventanilla
+Route::middleware('auth:sanctum')->post('sesiones-ventanilla', [App\Http\Controllers\Api\SesionVentanillaController::class, 'iniciar']);
+Route::middleware('auth:sanctum')->post('sesiones-ventanilla/cerrar', [App\Http\Controllers\Api\SesionVentanillaController::class, 'cerrar']);
+
 // Rutas para servicios activos de la ventanilla asignada al usuario autenticado
 Route::middleware('auth:sanctum')->get('mis-servicios-ventanilla', [App\Http\Controllers\Api\ServicioVentanillaController::class, 'index']);
 Route::middleware('auth:sanctum')->put('mis-servicios-ventanilla', [App\Http\Controllers\Api\ServicioVentanillaController::class, 'update']);

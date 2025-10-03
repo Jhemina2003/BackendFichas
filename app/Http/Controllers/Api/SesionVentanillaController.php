@@ -11,13 +11,13 @@ class SesionVentanillaController extends Controller
     public function iniciar(Request $request, SesionVentanillaService $service)
     {
         $request->validate([
-            'fk_sesion_id' => 'required|integer',
             'fk_usuario_id' => 'required|integer',
             'fk_ventanilla_id' => 'required|integer',
+            // fk_sesion_id es opcional
         ]);
         try {
             $sesion = $service->iniciarSesionVentanilla(
-                $request->fk_sesion_id,
+                $request->input('fk_sesion_id'),
                 $request->fk_usuario_id,
                 $request->fk_ventanilla_id
             );

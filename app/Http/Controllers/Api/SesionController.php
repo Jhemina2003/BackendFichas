@@ -63,9 +63,9 @@ class SesionController extends Controller {
             if (empty($data['fk_sucursal_id']) && $request->user()) {
                 $data['fk_sucursal_id'] = $request->user()->fk_sucursal_id;
             }
-            // Si no se envía fecha, usar la fecha actual
+            // Si no se envía fecha, usar la fecha y hora actual (datetime)
             if (empty($data['fecha'])) {
-                $data['fecha'] = now();
+                $data['fecha'] = now()->format('Y-m-d H:i:s');
             }
             $sesion = $sesionService->crearSesion($data);
             return response()->json($sesion, 201);

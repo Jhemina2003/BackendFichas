@@ -15,6 +15,29 @@ class SesionVentanillaService
      */
     public function iniciarSesionVentanilla($fk_sesion_id, $fk_usuario_id, $fk_ventanilla_id): SesionVentanilla
     {
+        // Si no se envía fk_sesion_id, buscar o crear la sesión de sucursal activa
+        if (empty($fk_sesion_id)) {
+            // Buscar sucursal a partir de la ventanilla
+            $ventanilla = \App\Models\Ventanilla::findOrFail($fk_ventanilla_id);
+            $sucursalId = $ventanilla->fk_sucursal_id;
+            $estadoActiva = \App\Enums\EstadoSesionEnum::ACTIVA->value;
+            $dominioActiva = \App\Models\Dominio::where('nombre', $estadoActiva)->first();
+            $sesion = \App\Models\Sesion::where('fk_sucursal_id', $sucursalId)
+                ->whereDate('fecha', Carbon::now()->toDateString())
+                ->where('fk_dominio_estado_id', $dominioActiva->dominio_id)
+                ->first();
+            if (!$sesion) {
+                // Crear sesión de sucursal activa
+                $sesion = \App\Models\Sesion::create([
+                    'fk_sucursal_id' => $sucursalId,
+                    'fecha' => Carbon::now(),
+                    'fk_dominio_estado_id' => $dominioActiva->dominio_id
+                ]);
+            }
+            $fk_sesion_id = $sesion->sesion_id;
+        } else {
+            $ventanilla = \App\Models\Ventanilla::findOrFail($fk_ventanilla_id);
+        }
         // Verificar si ya existe una sesión activa para este usuario/ventanilla y sesión global
         $existe = SesionVentanilla::where('fk_sesion_id', $fk_sesion_id)
             ->where('fk_usuario_id', $fk_usuario_id)
@@ -25,7 +48,6 @@ class SesionVentanillaService
             throw new \Exception('Ya existe una sesión activa para esta ventanilla.');
         }
         // Cambiar estado de la ventanilla a 'abierta'
-        $ventanilla = \App\Models\Ventanilla::findOrFail($fk_ventanilla_id);
         $ventanilla->estado = \App\Enums\EstadoVentanillaEnum::ABIERTA->value;
         $ventanilla->save();
         return SesionVentanilla::create([
