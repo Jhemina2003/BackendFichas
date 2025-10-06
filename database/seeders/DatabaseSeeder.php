@@ -96,5 +96,8 @@ class DatabaseSeeder extends Seeder
                 'fk_ventanilla_id' => null
             ]
         );
+
+        // Asignar servicios a ventanillas según la lógica definida
+        $this->call(\Database\Seeders\VentanillaTipoServicioSeeder::class);
     }
 }

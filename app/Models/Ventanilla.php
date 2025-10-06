@@ -22,4 +22,14 @@ class Ventanilla extends Model
     {
         return $this->belongsTo(\App\Models\Sucursal::class, 'fk_sucursal_id', 'sucursal_id');
     }
+
+    public function tiposServicio()
+    {
+        return $this->belongsToMany(
+            Dominio::class,
+            'ventanilla_tipo_servicio',
+            'ventanilla_id',
+            'dominio_id'
+        );
+    }
 }

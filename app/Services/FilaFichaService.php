@@ -22,9 +22,18 @@ class FilaFichaService
         $dominioEspera = Dominio::where('nombre', 'en_espera')->first();
         if (!$dominioEspera) return null;
 
-        // Obtener la siguiente ficha preferencial y normal en espera
+        // Obtener los tipos de servicio que puede atender la ventanilla
+        $ventanilla = \App\Models\Ventanilla::find($ventanillaId);
+        if (!$ventanilla) return null;
+    $tiposServicioIds = $ventanilla->tiposServicio()->pluck('dominios.dominio_id')->toArray();
+        if (empty($tiposServicioIds)) return null;
+
+        // Obtener la siguiente ficha preferencial y normal en espera, filtrando por tipo de servicio permitido
         $fichaPreferencial = Ficha::whereHas('tipoFicha', function($q) {
                 $q->where('nombre', 'preferencial');
+            })
+            ->whereHas('tipoServicio', function($q) use ($tiposServicioIds) {
+                $q->whereIn('dominio_id', $tiposServicioIds);
             })
             ->whereHas('seguimientos', function($q) use ($dominioEspera) {
                 $q->where('fk_dominio_estado_id', $dominioEspera->dominio_id);
@@ -35,6 +44,9 @@ class FilaFichaService
 
         $fichaNormal = Ficha::whereHas('tipoFicha', function($q) {
                 $q->where('nombre', 'normal');
+            })
+            ->whereHas('tipoServicio', function($q) use ($tiposServicioIds) {
+                $q->whereIn('dominio_id', $tiposServicioIds);
             })
             ->whereHas('seguimientos', function($q) use ($dominioEspera) {
                 $q->where('fk_dominio_estado_id', $dominioEspera->dominio_id);

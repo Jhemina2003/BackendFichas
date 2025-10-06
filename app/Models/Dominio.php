@@ -12,4 +12,9 @@ class Dominio extends Model
     protected $primaryKey = 'dominio_id';
     protected $guarded = [];
     public $timestamps = true;
+
+    public function dominioGrupo()
+    {
+        return $this->belongsTo(DominioGrupo::class, 'fk_dominio_grupo_id', 'dominio_grupo_id');
+    }
 }

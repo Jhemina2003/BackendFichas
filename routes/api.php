@@ -1,6 +1,10 @@
+
+<?php
+
+// Importante: esta ruta debe ir antes del apiResource de ventanillas
+Route::post('ventanillas/{id}/servicios', [App\Http\Controllers\Api\VentanillaServicioController::class, 'asignarServicios']);
 // Dashboard de ventanilla (protegido)
 Route::middleware('auth:sanctum')->get('ventanilla/dashboard', [App\Http\Controllers\Api\VentanillaDashboardController::class, 'dashboard']);
-<?php
 
 use Illuminate\Support\Facades\Route;
 
@@ -10,11 +14,12 @@ Route::apiResource('usuarios', App\Http\Controllers\Api\UsuarioController::class
 Route::get('fichas/estadisticas', [App\Http\Controllers\Api\FichaController::class, 'estadisticas']);
 Route::apiResource('fichas', App\Http\Controllers\Api\FichaController::class);
 Route::apiResource('llamadas', App\Http\Controllers\Api\LlamadaController::class);
-Route::post('llamadas/llamar-siguiente', [App\Http\Controllers\Api\LlamadaController::class, 'llamarSiguiente']);
+Route::middleware('auth:sanctum')->post('llamadas/llamar-siguiente', [App\Http\Controllers\Api\LlamadaController::class, 'llamarSiguiente']);
 Route::apiResource('dominios', App\Http\Controllers\Api\DominioController::class)->only(['index', 'show']);
 Route::apiResource('dominios-grupo', App\Http\Controllers\Api\DominioGrupoController::class)->only(['index', 'show']);
 Route::apiResource('roles', App\Http\Controllers\Api\RolController::class)->only(['index', 'show']);
 Route::apiResource('rol-usuarios', App\Http\Controllers\Api\RolUsuarioController::class)->only(['store', 'destroy']);
+Route::get('ventanillas/{id}/servicios', [App\Http\Controllers\Api\VentanillaController::class, 'servicios']);
 Route::apiResource('ventanillas', App\Http\Controllers\Api\VentanillaController::class);
 Route::post('ventanillas/{id}/cerrar', [App\Http\Controllers\Api\VentanillaController::class, 'cerrar']);
 Route::post('ventanillas/{id}/abrir', [App\Http\Controllers\Api\VentanillaController::class, 'abrir']);

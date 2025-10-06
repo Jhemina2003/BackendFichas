@@ -9,6 +9,26 @@ use App\Services\VentanillaService;
 
 class VentanillaController extends Controller
 {
+    /**
+     * Devuelve los servicios que atiende una ventanilla.
+     * GET /api/ventanillas/{id}/servicios
+     */
+    public function servicios($id)
+    {
+        $ventanilla = Ventanilla::with('tiposServicio')->findOrFail($id);
+        // Solo devolver nombre y dominio_id
+        $servicios = $ventanilla->tiposServicio->map(function($servicio) {
+            return [
+                'dominio_id' => $servicio->dominio_id,
+                'nombre' => $servicio->nombre
+            ];
+        });
+        return response()->json([
+            'ventanilla_id' => $ventanilla->ventanilla_id,
+            'numero' => $ventanilla->numero,
+            'servicios' => $servicios
+        ]);
+    }
     public function index(Request $request) {
         $query = Ventanilla::with(['sucursal.organizacion']);
         if ($request->has('sucursal_id')) {

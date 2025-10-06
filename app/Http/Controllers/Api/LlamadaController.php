@@ -19,16 +19,16 @@ class LlamadaController extends Controller
     /**
      * Llama a la siguiente ficha en espera (preferencial primero), crea la llamada y retorna la ficha llamada.
      * POST /api/llamadas/llamar-siguiente
-     * Body: { "fk_usuario_id": int, "fk_ventanilla_id": int }
+     * El usuario autenticado debe tener fk_ventanilla_id asignado.
      */
     public function llamarSiguiente(Request $request, LlamadaService $llamadaService)
     {
         try {
-            $request->validate([
-                'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
-                'fk_ventanilla_id' => 'required|exists:ventanillas,ventanilla_id',
-            ]);
-            $ventanillaId = $request->fk_ventanilla_id;
+            $usuario = auth()->user();
+            if (!$usuario || !$usuario->fk_ventanilla_id) {
+                return response()->json(['message' => 'Usuario no autenticado o sin ventanilla asignada'], 403);
+            }
+            $ventanillaId = $usuario->fk_ventanilla_id;
             $ficha = $this->filaFichaService->siguienteFichaEnEsperaPorVentanilla($ventanillaId);
             if (!$ficha) {
                 return response()->json(['message' => 'No hay fichas en espera para los servicios activos de esta ventanilla'], 404);
@@ -40,7 +40,7 @@ class LlamadaController extends Controller
             }
             // Crear la llamada
             $llamada = $llamadaService->crearLlamada([
-                'fk_usuario_id' => $request->fk_usuario_id,
+                'fk_usuario_id' => $usuario->usuario_id,
                 'fk_ventanilla_id' => $ventanillaId,
                 'fk_ficha_id' => $ficha->ficha_id,
                 'fecha' => now(),
@@ -51,7 +51,7 @@ class LlamadaController extends Controller
                 \App\Models\Seguimiento::create([
                     'fk_ficha_id' => $ficha->ficha_id,
                     'fk_ventanilla_id' => $ventanillaId,
-                    'fk_usuario_id' => $request->fk_usuario_id,
+                    'fk_usuario_id' => $usuario->usuario_id,
                     'fk_dominio_estado_id' => $dominioLlamado->dominio_id,
                     'fk_dominio_accion_id' => $dominioLlamado->dominio_id,
                     'fecha' => now(),
@@ -62,8 +62,6 @@ class LlamadaController extends Controller
                 'llamada' => $llamada,
                 'ficha' => $ficha
             ], 201);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['message' => 'Datos inválidos', 'errors' => $e->errors()], 400);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
