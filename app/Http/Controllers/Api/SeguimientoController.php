@@ -9,6 +9,126 @@ use App\Services\SeguimientoService;
 
 class SeguimientoController extends Controller
 {
+    // Rellamar ficha (incrementa cantidad_llamadas, estado sigue en 'llamado')
+    public function rellamar(Request $request, SeguimientoService $seguimientoService)
+    {
+        $usuario = auth()->user();
+        
+        // Validar que la ventanilla tenga una sesión activa
+        $sesionActiva = \App\Models\SesionVentanilla::where('fk_ventanilla_id', $usuario->fk_ventanilla_id)
+            ->where('fk_usuario_id', $usuario->usuario_id)
+            ->where('estado', 'activa')
+            ->whereNull('hora_cierre')
+            ->first();
+            
+        if (!$sesionActiva) {
+            return response()->json(['message' => 'Debe iniciar sesión en la ventanilla antes de realizar acciones'], 403);
+        }
+        
+        // Buscar la última ficha llamada por esta ventanilla
+        $ficha = $this->getFichaActualVentanilla($usuario);
+        if (!$ficha) {
+            return response()->json(['message' => 'No hay ninguna ficha activa para esta ventanilla.'], 404);
+        }
+        
+        $estadoActual = $ficha->estado_actual;
+        if ($estadoActual !== 'llamado') {
+            return response()->json(['message' => 'Solo se puede rellamar una ficha en estado "llamado".'], 409);
+        }
+        
+        // Incrementar cantidad_llamadas
+        $ficha->cantidad_llamadas++;
+        $ficha->save();
+        
+        // Registrar seguimiento de rellamada
+        $dominioLlamado = \App\Models\Dominio::where('nombre', 'llamado')->first();
+        $seguimiento = $seguimientoService->crearSeguimiento([
+            'fk_ficha_id' => $ficha->ficha_id,
+            'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
+            'fk_usuario_id' => $usuario->usuario_id,
+            'estado' => 'llamado',
+            'fk_dominio_accion_id' => $dominioLlamado?->dominio_id,
+            'fecha' => now(),
+            'observacion' => 'Ficha rellamada. Total llamadas: ' . $ficha->cantidad_llamadas
+        ]);
+        return response()->json($seguimiento, 201);
+    }
+
+    // Observación obligatoria y finaliza
+    public function observacion(Request $request, SeguimientoService $seguimientoService)
+    {
+        $usuario = auth()->user();
+        $request->validate([
+            'observacion' => 'required|string|min:5',
+        ]);
+        
+        $ficha = $this->getFichaActualVentanilla($usuario);
+        if (!$ficha) {
+            return response()->json(['message' => 'No hay ninguna ficha activa para esta ventanilla.'], 404);
+        }
+        
+        $estadoActual = $ficha->estado_actual;
+        if ($estadoActual !== 'en_atencion') {
+            return response()->json(['message' => 'Solo se puede agregar observación a una ficha en atención.'], 409);
+        }
+        
+        $dominioFinalizado = \App\Models\Dominio::where('nombre', 'finalizado')->first();
+        $seguimiento = $seguimientoService->crearSeguimiento([
+            'fk_ficha_id' => $ficha->ficha_id,
+            'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
+            'fk_usuario_id' => $usuario->usuario_id,
+            'estado' => 'finalizado',
+            'fk_dominio_accion_id' => $dominioFinalizado?->dominio_id,
+            'fecha' => now(),
+            'observacion' => $request->observacion
+        ]);
+        return response()->json($seguimiento, 201);
+    }
+
+    // Redirigir ficha (reasignado y finalizado)
+    public function redirigir(Request $request, SeguimientoService $seguimientoService)
+    {
+        $usuario = auth()->user();
+        $request->validate([
+            'justificativo' => 'required|string|min:5',
+        ]);
+        
+        $ficha = $this->getFichaActualVentanilla($usuario);
+        if (!$ficha) {
+            return response()->json(['message' => 'No hay ninguna ficha activa para esta ventanilla.'], 404);
+        }
+        
+        $estadoActual = $ficha->estado_actual;
+        if ($estadoActual !== 'en_atencion') {
+            return response()->json(['message' => 'Solo se puede redirigir una ficha en atención.'], 409);
+        }
+        
+        $dominioReasignado = \App\Models\Dominio::where('nombre', 'reasignado')->first();
+        $seguimiento = $seguimientoService->crearSeguimiento([
+            'fk_ficha_id' => $ficha->ficha_id,
+            'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
+            'fk_usuario_id' => $usuario->usuario_id,
+            'estado' => 'reasignado',
+            'fk_dominio_accion_id' => $dominioReasignado?->dominio_id,
+            'fecha' => now(),
+            'observacion' => 'Ficha redirigida. Motivo: ' . $request->justificativo
+        ]);
+        // Finalizar
+        $dominioFinalizado = \App\Models\Dominio::where('nombre', 'finalizado')->first();
+        $seguimientoFinal = $seguimientoService->crearSeguimiento([
+            'fk_ficha_id' => $ficha->ficha_id,
+            'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
+            'fk_usuario_id' => $usuario->usuario_id,
+            'estado' => 'finalizado',
+            'fk_dominio_accion_id' => $dominioFinalizado?->dominio_id,
+            'fecha' => now(),
+            'observacion' => 'Ficha finalizada tras redirección.'
+        ]);
+        return response()->json([
+            'seguimiento_redirigir' => $seguimiento,
+            'seguimiento_final' => $seguimientoFinal
+        ], 201);
+    }
     /**
      * Reasigna una ficha a otra ventanilla, insertándola como primera en la cola de espera.
      * Reglas: no permite reasignar a ventanilla cerrada/bloqueada, registra seguimiento, cambia estado a 'en_espera'.
@@ -83,7 +203,37 @@ class SeguimientoController extends Controller
             'message' => 'Ficha reasignada correctamente a la ventanilla '.$ventanillaDestino->numero.' y puesta como primera en espera.'
         ], 201);
     }
-// ...existing code...
+
+    /**
+     * Obtiene la ficha actual (en estado 'llamado' o 'en_atencion') de la ventanilla del usuario autenticado
+     * Se expone como público para uso desde otros controladores
+     */
+    public function getFichaActualVentanilla($usuario)
+    {
+        if (!$usuario->fk_ventanilla_id) {
+            return null;
+        }
+        
+        // Buscar fichas de esta ventanilla que estén realmente en estado activo
+        $fichas = \App\Models\Ficha::whereHas('seguimientos', function($q) use ($usuario) {
+                $q->where('fk_ventanilla_id', $usuario->fk_ventanilla_id);
+            })
+            ->with(['seguimientos' => function($q) {
+                $q->with('dominioEstado')->latest('created_at');
+            }])
+            ->get();
+            
+        // Filtrar por estado actual calculado
+        foreach ($fichas as $ficha) {
+            $estadoActual = $ficha->estado_actual;
+            if (in_array($estadoActual, ['llamado', 'en_atencion'])) {
+                return $ficha;
+            }
+        }
+        
+        return null;
+    }
+
     /**
      * Busca una ficha por ID numérico o por número formateado (con prefijo).
      */
@@ -102,31 +252,32 @@ class SeguimientoController extends Controller
         abort(404, 'Ficha no encontrada por número formateado');
     }
     // Marcar ficha como ausente
-    public function marcarAusente(Request $request, $fichaId, SeguimientoService $seguimientoService)
+    public function marcarAusente(Request $request, SeguimientoService $seguimientoService)
     {
+        $usuario = auth()->user();
         $request->validate([
-            'fk_ventanilla_id' => 'required|exists:ventanillas,ventanilla_id',
-            'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
             'observacion' => 'nullable|string',
         ]);
-        $ficha = $this->findFichaByIdOrNumero($fichaId);
+        
+        $ficha = $this->getFichaActualVentanilla($usuario);
+        if (!$ficha) {
+            return response()->json(['message' => 'No hay ninguna ficha activa para esta ventanilla.'], 404);
+        }
+        
         $estadoActual = $ficha->estado_actual;
-        $ultimoLlamado = $ficha->seguimientos()->whereHas('dominioEstado', function($q){ $q->where('nombre', 'llamado'); })->latest('fecha')->first();
         if ($estadoActual !== 'llamado') {
             return response()->json(['message' => 'Solo se puede marcar como ausente una ficha que ha sido llamada y está esperando al usuario.'], 409);
         }
-        if (!$ultimoLlamado || $ultimoLlamado->fk_ventanilla_id != $request->fk_ventanilla_id) {
-            return response()->json(['message' => 'Solo la ventanilla que realizó la última llamada puede marcar la ficha como ausente.'], 409);
-        }
+        
         try {
             $dominio = \App\Models\Dominio::where('nombre', 'ausente')->first();
             if (!$dominio) {
                 return response()->json(['message' => "No existe un dominio con nombre 'ausente' para el estado de la ficha."], 422);
             }
             $seguimiento = $seguimientoService->crearSeguimiento([
-                'fk_ficha_id' => $fichaId,
-                'fk_ventanilla_id' => $request->fk_ventanilla_id,
-                'fk_usuario_id' => $request->fk_usuario_id,
+                'fk_ficha_id' => $ficha->ficha_id,
+                'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
+                'fk_usuario_id' => $usuario->usuario_id,
                 'estado' => 'ausente',
                 'fk_dominio_accion_id' => $dominio->dominio_id,
                 'fecha' => now(),
@@ -138,27 +289,27 @@ class SeguimientoController extends Controller
         return response()->json($seguimiento, 201);
     }
     // Marcar ficha como en_atencion
-    public function marcarEnAtencion(Request $request, $fichaId, SeguimientoService $seguimientoService)
+    public function marcarEnAtencion(Request $request, SeguimientoService $seguimientoService)
     {
-        $request->validate([
-            'fk_ventanilla_id' => 'required|exists:ventanillas,ventanilla_id',
-            'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
-        ]);
-        $ficha = $this->findFichaByIdOrNumero($fichaId);
+        $usuario = auth()->user();
+        
+        $ficha = $this->getFichaActualVentanilla($usuario);
+        if (!$ficha) {
+            return response()->json(['message' => 'No hay ninguna ficha activa para esta ventanilla.'], 404);
+        }
+        
         $estadoActual = $ficha->estado_actual;
-        $ultimoLlamado = $ficha->seguimientos()->whereHas('dominioEstado', function($q){ $q->where('nombre', 'llamado'); })->latest('fecha')->first();
         if ($estadoActual !== 'llamado') {
             return response()->json(['message' => 'Solo se puede poner en atención una ficha que ha sido llamada y está esperando al usuario.'], 409);
         }
-        if (!$ultimoLlamado || $ultimoLlamado->fk_ventanilla_id != $request->fk_ventanilla_id) {
-            return response()->json(['message' => 'Solo la ventanilla que realizó la última llamada puede poner la ficha en atención.'], 409);
-        }
+        
+        $dominioEnAtencion = \App\Models\Dominio::where('nombre', 'en_atencion')->first();
         $seguimiento = $seguimientoService->crearSeguimiento([
-            'fk_ficha_id' => $fichaId,
-            'fk_ventanilla_id' => $request->fk_ventanilla_id,
-            'fk_usuario_id' => $request->fk_usuario_id,
+            'fk_ficha_id' => $ficha->ficha_id,
+            'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
+            'fk_usuario_id' => $usuario->usuario_id,
             'estado' => 'en_atencion',
-            'fk_dominio_accion_id' => null,
+            'fk_dominio_accion_id' => $dominioEnAtencion?->dominio_id,
             'fecha' => now(),
             'observacion' => 'Ficha en atención.'
         ]);
@@ -166,17 +317,20 @@ class SeguimientoController extends Controller
     }
 
     // Marcar ficha como finalizada
-    public function marcarFinalizada(Request $request, $fichaId, SeguimientoService $seguimientoService)
+    public function marcarFinalizada(Request $request, SeguimientoService $seguimientoService)
     {
-        $request->validate([
-            'fk_ventanilla_id' => 'required|exists:ventanillas,ventanilla_id',
-            'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
-        ]);
-        $ficha = $this->findFichaByIdOrNumero($fichaId);
+        $usuario = auth()->user();
+        
+        $ficha = $this->getFichaActualVentanilla($usuario);
+        if (!$ficha) {
+            return response()->json(['message' => 'No hay ninguna ficha activa para esta ventanilla.'], 404);
+        }
+        
         $estadoActual = $ficha->estado_actual;
         if ($estadoActual !== 'en_atencion') {
             return response()->json(['message' => 'Solo se puede finalizar una ficha en estado "en_atencion".'], 409);
         }
+        
         try {
             // Buscar el dominio correspondiente
             $dominio = \App\Models\Dominio::where('nombre', 'finalizado')->first();
@@ -184,9 +338,9 @@ class SeguimientoController extends Controller
                 return response()->json(['message' => "No existe un dominio con nombre 'finalizado' para el estado de la ficha."], 422);
             }
             $seguimiento = $seguimientoService->crearSeguimiento([
-                'fk_ficha_id' => $fichaId,
-                'fk_ventanilla_id' => $request->fk_ventanilla_id,
-                'fk_usuario_id' => $request->fk_usuario_id,
+                'fk_ficha_id' => $ficha->ficha_id,
+                'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
+                'fk_usuario_id' => $usuario->usuario_id,
                 'estado' => 'finalizado',
                 'fk_dominio_accion_id' => $dominio->dominio_id,
                 'fecha' => now(),

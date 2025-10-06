@@ -28,7 +28,20 @@ class LlamadaController extends Controller
             if (!$usuario || !$usuario->fk_ventanilla_id) {
                 return response()->json(['message' => 'Usuario no autenticado o sin ventanilla asignada'], 403);
             }
+            
             $ventanillaId = $usuario->fk_ventanilla_id;
+            
+            // Validar que la ventanilla tenga una sesión activa
+            $sesionActiva = \App\Models\SesionVentanilla::where('fk_ventanilla_id', $ventanillaId)
+                ->where('fk_usuario_id', $usuario->usuario_id)
+                ->where('estado', 'activa')
+                ->whereNull('hora_cierre')
+                ->first();
+                
+            if (!$sesionActiva) {
+                return response()->json(['message' => 'Debe iniciar sesión en la ventanilla antes de llamar fichas'], 403);
+            }
+            
             $ficha = $this->filaFichaService->siguienteFichaEnEsperaPorVentanilla($ventanillaId);
             if (!$ficha) {
                 return response()->json(['message' => 'No hay fichas en espera para los servicios activos de esta ventanilla'], 404);

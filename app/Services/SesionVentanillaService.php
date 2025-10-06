@@ -38,14 +38,24 @@ class SesionVentanillaService
         } else {
             $ventanilla = \App\Models\Ventanilla::findOrFail($fk_ventanilla_id);
         }
-        // Verificar si ya existe una sesión activa para este usuario/ventanilla y sesión global
+        // Verificar si la ventanilla ya está ocupada por OTRO usuario
         $existe = SesionVentanilla::where('fk_sesion_id', $fk_sesion_id)
+            ->where('fk_ventanilla_id', $fk_ventanilla_id)
+            ->where('fk_usuario_id', '!=', $fk_usuario_id) // Diferente usuario
+            ->where('estado', EstadoSesionVentanillaEnum::ACTIVA->value)
+            ->first();
+        if ($existe) {
+            throw new \Exception('Esta ventanilla ya está siendo utilizada por otro usuario.');
+        }
+        
+        // Verificar si este usuario ya tiene una sesión activa en esta ventanilla
+        $sesionExistente = SesionVentanilla::where('fk_sesion_id', $fk_sesion_id)
             ->where('fk_usuario_id', $fk_usuario_id)
             ->where('fk_ventanilla_id', $fk_ventanilla_id)
             ->where('estado', EstadoSesionVentanillaEnum::ACTIVA->value)
             ->first();
-        if ($existe) {
-            throw new \Exception('Ya existe una sesión activa para esta ventanilla.');
+        if ($sesionExistente) {
+            throw new \Exception('Ya tienes una sesión activa en esta ventanilla.');
         }
         // Cambiar estado de la ventanilla a 'abierta'
         $ventanilla->estado = \App\Enums\EstadoVentanillaEnum::ABIERTA->value;

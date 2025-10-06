@@ -25,35 +25,38 @@ class FilaFichaService
         // Obtener los tipos de servicio que puede atender la ventanilla
         $ventanilla = \App\Models\Ventanilla::find($ventanillaId);
         if (!$ventanilla) return null;
-    $tiposServicioIds = $ventanilla->tiposServicio()->pluck('dominios.dominio_id')->toArray();
+        $tiposServicioIds = $ventanilla->tiposServicio()->pluck('dominios.dominio_id')->toArray();
         if (empty($tiposServicioIds)) return null;
 
-        // Obtener la siguiente ficha preferencial y normal en espera, filtrando por tipo de servicio permitido
-        $fichaPreferencial = Ficha::whereHas('tipoFicha', function($q) {
+        // Obtener todas las fichas y filtrar por estado actual calculado
+        $fichasPreferenciales = Ficha::whereHas('tipoFicha', function($q) {
                 $q->where('nombre', 'preferencial');
             })
             ->whereHas('tipoServicio', function($q) use ($tiposServicioIds) {
                 $q->whereIn('dominio_id', $tiposServicioIds);
             })
-            ->whereHas('seguimientos', function($q) use ($dominioEspera) {
-                $q->where('fk_dominio_estado_id', $dominioEspera->dominio_id);
-            })
             ->orderBy('fecha_registro')
             ->orderBy('ficha_id')
-            ->first();
+            ->get()
+            ->filter(function($ficha) {
+                return $ficha->estado_actual === 'en_espera';
+            });
 
-        $fichaNormal = Ficha::whereHas('tipoFicha', function($q) {
+        $fichasNormales = Ficha::whereHas('tipoFicha', function($q) {
                 $q->where('nombre', 'normal');
             })
             ->whereHas('tipoServicio', function($q) use ($tiposServicioIds) {
                 $q->whereIn('dominio_id', $tiposServicioIds);
             })
-            ->whereHas('seguimientos', function($q) use ($dominioEspera) {
-                $q->where('fk_dominio_estado_id', $dominioEspera->dominio_id);
-            })
             ->orderBy('fecha_registro')
             ->orderBy('ficha_id')
-            ->first();
+            ->get()
+            ->filter(function($ficha) {
+                return $ficha->estado_actual === 'en_espera';
+            });
+
+        $fichaPreferencial = $fichasPreferenciales->first();
+        $fichaNormal = $fichasNormales->first();
 
         // Leer el contador global de atención desde storage
         $counterFile = storage_path('app/turno_counter.txt');

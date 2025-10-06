@@ -10,16 +10,16 @@ class SesionVentanillaController extends Controller
 {
     public function iniciar(Request $request, SesionVentanillaService $service)
     {
-        $request->validate([
-            'fk_usuario_id' => 'required|integer',
-            'fk_ventanilla_id' => 'required|integer',
-            // fk_sesion_id es opcional
-        ]);
+        $usuario = auth()->user();
+        if (!$usuario || !$usuario->fk_ventanilla_id) {
+            return response()->json(['message' => 'Usuario no autenticado o sin ventanilla asignada'], 403);
+        }
+        
         try {
             $sesion = $service->iniciarSesionVentanilla(
-                $request->input('fk_sesion_id'),
-                $request->fk_usuario_id,
-                $request->fk_ventanilla_id
+                null, // fk_sesion_id se busca/crea automáticamente
+                $usuario->usuario_id,
+                $usuario->fk_ventanilla_id
             );
             return response()->json($sesion, 201);
         } catch (\Exception $e) {
@@ -29,16 +29,26 @@ class SesionVentanillaController extends Controller
 
     public function cerrar(Request $request, SesionVentanillaService $service)
     {
-        $request->validate([
-            'fk_sesion_id' => 'required|integer',
-            'fk_usuario_id' => 'required|integer',
-            'fk_ventanilla_id' => 'required|integer',
-        ]);
+        $usuario = auth()->user();
+        if (!$usuario || !$usuario->fk_ventanilla_id) {
+            return response()->json(['message' => 'Usuario no autenticado o sin ventanilla asignada'], 403);
+        }
+        
         try {
+            // Buscar la sesión activa del usuario
+            $sesionVentanilla = \App\Models\SesionVentanilla::where('fk_usuario_id', $usuario->usuario_id)
+                ->where('fk_ventanilla_id', $usuario->fk_ventanilla_id)
+                ->where('estado', 'activa')
+                ->first();
+                
+            if (!$sesionVentanilla) {
+                return response()->json(['message' => 'No hay sesión activa para cerrar'], 404);
+            }
+            
             $service->cerrarSesionVentanilla(
-                $request->fk_sesion_id,
-                $request->fk_usuario_id,
-                $request->fk_ventanilla_id
+                $sesionVentanilla->fk_sesion_id,
+                $usuario->usuario_id,
+                $usuario->fk_ventanilla_id
             );
             return response()->json(['message' => 'Sesión de ventanilla cerrada.']);
         } catch (\Exception $e) {

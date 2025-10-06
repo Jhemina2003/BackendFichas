@@ -1,12 +1,20 @@
-
 <?php
+
+use Illuminate\Support\Facades\Route;
+
+// Rutas de ventanilla (protegidas con auth:sanctum)
+Route::middleware('auth:sanctum')->post('ventanilla/rellamar', [App\Http\Controllers\Api\SeguimientoController::class, 'rellamar']);
+Route::middleware('auth:sanctum')->post('ventanilla/en-atencion', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarEnAtencion']);
+Route::middleware('auth:sanctum')->post('ventanilla/finalizar', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarFinalizada']);
+Route::middleware('auth:sanctum')->post('ventanilla/ausente', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarAusente']);
+Route::middleware('auth:sanctum')->post('ventanilla/observacion', [App\Http\Controllers\Api\SeguimientoController::class, 'observacion']);
+Route::middleware('auth:sanctum')->post('ventanilla/redirigir', [App\Http\Controllers\Api\SeguimientoController::class, 'redirigir']);
+Route::middleware('auth:sanctum')->get('ventanilla/ficha-actual', [App\Http\Controllers\Api\VentanillaController::class, 'fichaActual']);
 
 // Importante: esta ruta debe ir antes del apiResource de ventanillas
 Route::post('ventanillas/{id}/servicios', [App\Http\Controllers\Api\VentanillaServicioController::class, 'asignarServicios']);
 // Dashboard de ventanilla (protegido)
 Route::middleware('auth:sanctum')->get('ventanilla/dashboard', [App\Http\Controllers\Api\VentanillaDashboardController::class, 'dashboard']);
-
-use Illuminate\Support\Facades\Route;
 
 // Ejemplo de rutas para la API
 Route::apiResource('usuarios', App\Http\Controllers\Api\UsuarioController::class);
@@ -29,10 +37,7 @@ Route::apiResource('organizaciones', App\Http\Controllers\Api\OrganizacionContro
 Route::post('sesiones/{id}/reabrir', [App\Http\Controllers\Api\SesionController::class, 'reabrir']);
 Route::apiResource('sesiones', App\Http\Controllers\Api\SesionController::class);
 Route::apiResource('seguimientos', App\Http\Controllers\Api\SeguimientoController::class)->only(['index', 'show', 'store']);
-// Acciones de atención sobre fichas
-Route::post('fichas/{ficha}/en-atencion', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarEnAtencion']);
-Route::post('fichas/{ficha}/finalizar', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarFinalizada']);
-Route::post('fichas/{ficha}/ausente', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarAusente']);
+// Acciones de atención sobre fichas (conservar para reasignar y historial)
 Route::post('fichas/{ficha}/reasignar', [App\Http\Controllers\Api\SeguimientoController::class, 'reasignarFicha']);
 Route::get('fichas/{ficha}/historial', [App\Http\Controllers\Api\SeguimientoController::class, 'historial']);
 Route::apiResource('asignaciones', App\Http\Controllers\Api\AsignacionController::class);
@@ -40,8 +45,6 @@ Route::apiResource('asignaciones', App\Http\Controllers\Api\AsignacionController
 // Rutas de autenticación Sanctum
 Route::post('login', [App\Http\Controllers\Api\AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('logout', [App\Http\Controllers\Api\AuthController::class, 'logout']);
-
-
 
 // Rutas para sesiones de ventanilla
 Route::middleware('auth:sanctum')->post('sesiones-ventanilla', [App\Http\Controllers\Api\SesionVentanillaController::class, 'iniciar']);

@@ -117,4 +117,22 @@ class VentanillaController extends Controller
         return response()->json($ventanilla);
     }
     public function destroy($id) { Ventanilla::destroy($id); return response()->json(null, 204); }
+
+    /**
+     * Devuelve la ficha activa (llamado o en_atencion) de la ventanilla del usuario autenticado
+     * GET /api/ventanilla/ficha-actual
+     */
+    public function fichaActual(Request $request)
+    {
+        $usuario = auth()->user();
+        if (!$usuario || !$usuario->fk_ventanilla_id) {
+            return response()->json(['message' => 'Usuario no autenticado o sin ventanilla asignada'], 403);
+        }
+        $ficha = app(\App\Http\Controllers\Api\SeguimientoController::class)
+            ->getFichaActualVentanilla($usuario);
+        if (!$ficha) {
+            return response()->json(['message' => 'No hay ficha activa para esta ventanilla'], 404);
+        }
+        return response()->json($ficha);
+    }
 }
