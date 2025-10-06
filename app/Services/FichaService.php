@@ -13,15 +13,6 @@ class FichaService
     public function crearFicha(array $data): Ficha
     {
         $data = $this->mapEnumsToDominioIds($data);
-        // Mapear tipo_servicio a fk_servicio_id
-        if (isset($data['tipo_servicio'])) {
-            $servicio = \App\Models\Servicio::whereRaw('LOWER(nombre) = ?', [strtolower($data['tipo_servicio'])])->first();
-            if (!$servicio) {
-                throw new \Exception('No se encontró el servicio solicitado: ' . $data['tipo_servicio']);
-            }
-            $data['fk_servicio_id'] = $servicio->servicio_id;
-            unset($data['tipo_servicio']);
-        }
         // Inicializar cantidad_llamadas en 0
         $data['cantidad_llamadas'] = 0;
 
@@ -72,9 +63,9 @@ class FichaService
     private function generarCorrelativoFicha(array $data): int
     {
         $fecha = isset($data['fecha_registro']) ? date('Y-m-d', strtotime($data['fecha_registro'])) : date('Y-m-d');
-        // El correlativo es independiente para cada combinación de tipo de ficha y servicio, por día
+        // El correlativo es independiente para cada combinación de tipo de ficha y tipo de servicio, por día
         $maxNumero = Ficha::where('fk_tipo_ficha_id', $data['fk_tipo_ficha_id'])
-            ->where('fk_servicio_id', $data['fk_servicio_id'])
+            ->where('fk_tipo_servicio_id', $data['fk_tipo_servicio_id'])
             ->whereDate('fecha_registro', $fecha)
             ->max('numero');
         return $maxNumero ? ($maxNumero + 1) : 1;
@@ -106,13 +97,33 @@ class FichaService
             $dominio = Dominio::where('nombre', $data['tipo_ficha'])->first();
             if ($dominio) {
                 $data['fk_tipo_ficha_id'] = $dominio->dominio_id;
-                $data['fk_dominio_tipo_id'] = $dominio->dominio_id;
             }
             unset($data['tipo_ficha']);
         }
-        // tipo_servicio eliminado, ahora se debe usar fk_servicio_id directamente
-        if (isset($data['prioridad_ficha'])) {
+        if (isset($data['tipo_servicio'])) {
+            $dominio = Dominio::where('nombre', $data['tipo_servicio'])->first();
+            if ($dominio) {
+                $data['fk_tipo_servicio_id'] = $dominio->dominio_id;
+            }
+            unset($data['tipo_servicio']);
         }
+        // Puedes agregar lógica para prioridad_ficha si lo necesitas
         return $data;
     }
-}
+
+    /**
+     * Genera el número de ficha con el formato correcto (APOS.1 o P.APOS.1)
+     */
+    public function generarNumeroFormateado(Ficha $ficha): string
+    {
+        $tipoServicio = $ficha->tipoServicio;
+        $tipoFicha = $ficha->tipoFicha;
+        $nombreServicio = $tipoServicio ? strtoupper($tipoServicio->nombre) : 'FICHA';
+        $prefijo = substr($nombreServicio, 0, 4);
+        $esPreferencial = $tipoFicha && $tipoFicha->nombre === 'preferencial';
+        if ($esPreferencial) {
+            return 'P.' . $prefijo . '.' . $ficha->numero;
+        }
+        return $prefijo . '.' . $ficha->numero;
+    }
+    }

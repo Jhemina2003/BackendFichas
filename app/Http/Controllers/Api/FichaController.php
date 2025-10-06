@@ -50,7 +50,7 @@ class FichaController extends Controller
 // ...existing code...
     public function index(Request $request)
     {
-    $query = Ficha::with(['usuario', 'sesion', 'tipoFicha', 'tipoServicio', 'prioridadFicha']);
+    $query = Ficha::with(['usuario', 'sesion', 'tipoFicha', 'tipoServicio']);
         if ($request->has('sesion_id')) {
             $query->where('fk_sesion_id', $request->sesion_id);
         }

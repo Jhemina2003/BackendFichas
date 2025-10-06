@@ -14,7 +14,7 @@ class FilaFichaService
      */
     /**
      * Devuelve la siguiente ficha a llamar en la fila general, priorizando las preferenciales,
-     * pero solo de los servicios activos de la ventanilla indicada.
+     * para todos los tipos de servicio (apostilla, legalizaciones, vivencia, devoluciones).
      * @param int $ventanillaId
      */
     public function siguienteFichaEnEsperaPorVentanilla(int $ventanillaId): ?Ficha
@@ -22,18 +22,10 @@ class FilaFichaService
         $dominioEspera = Dominio::where('nombre', 'en_espera')->first();
         if (!$dominioEspera) return null;
 
-        // Obtener los servicios activos de la ventanilla
-        $serviciosIds = \App\Models\ServicioVentanilla::where('fk_ventanilla_id', $ventanillaId)
-            ->where('activo', true)
-            ->pluck('fk_servicio_id')
-            ->toArray();
-        if (empty($serviciosIds)) return null;
-
-        // Obtener la siguiente ficha preferencial y normal en espera, solo de los servicios activos
+        // Obtener la siguiente ficha preferencial y normal en espera
         $fichaPreferencial = Ficha::whereHas('tipoFicha', function($q) {
                 $q->where('nombre', 'preferencial');
             })
-            ->whereIn('fk_servicio_id', $serviciosIds)
             ->whereHas('seguimientos', function($q) use ($dominioEspera) {
                 $q->where('fk_dominio_estado_id', $dominioEspera->dominio_id);
             })
@@ -44,7 +36,6 @@ class FilaFichaService
         $fichaNormal = Ficha::whereHas('tipoFicha', function($q) {
                 $q->where('nombre', 'normal');
             })
-            ->whereIn('fk_servicio_id', $serviciosIds)
             ->whereHas('seguimientos', function($q) use ($dominioEspera) {
                 $q->where('fk_dominio_estado_id', $dominioEspera->dominio_id);
             })

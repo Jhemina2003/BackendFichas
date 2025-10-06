@@ -14,7 +14,6 @@ use App\Models\Sesion;
 use App\Models\Sucursal;
 use App\Models\Usuario;
 use App\Models\Ventanilla;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -23,57 +22,45 @@ class DatabaseSeeder extends Seeder
      * Seed the application's database.
      */
     public function run(): void
-        // Poblar servicios base para la sucursal y ventanilla 1
-        $serviciosBase = ['apostilla', 'legalizaciones', 'vivencia', 'devoluciones'];
-        foreach ($serviciosBase as $nombreServicio) {
-            $dominioServicio = Dominio::where('nombre', $nombreServicio)->first();
-            if ($dominioServicio) {
-                \DB::table('servicios')->insert([
-                    'nombre' => $nombreServicio,
-                    'fk_ventanilla_id' => $ventanillas[1]->ventanilla_id, // Puedes cambiar a otra ventanilla si lo deseas
-                    'fk_dominio_tipo_servicio_id' => $dominioServicio->dominio_id,
-                    'fecha' => now()->toDateString(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
     {
-
         // Grupos de dominio específicos para el sistema de legalizaciones
-        $tipoFichaGrupo = DominioGrupo::create(['nombre' => 'tipo_ficha']);
-        $estadoSesionGrupo = DominioGrupo::create(['nombre' => 'estado_sesion']);
-        $estadoSeguimientoGrupo = DominioGrupo::create(['nombre' => 'estado_seguimiento']);
+        $tipoFichaGrupo = DominioGrupo::firstOrCreate(['nombre' => 'tipo_ficha']);
+        $tipoServicioGrupo = DominioGrupo::firstOrCreate(['nombre' => 'tipo_servicio']);
+        $estadoSesionGrupo = DominioGrupo::firstOrCreate(['nombre' => 'estado_sesion']);
+        $estadoSeguimientoGrupo = DominioGrupo::firstOrCreate(['nombre' => 'estado_seguimiento']);
 
-    // Dominios para tipo_ficha
-    $tipoNormal = Dominio::create(['nombre' => 'normal', 'fk_dominio_grupo_id' => $tipoFichaGrupo->dominio_grupo_id]);
-    $tipoPreferencial = Dominio::create(['nombre' => 'preferencial', 'fk_dominio_grupo_id' => $tipoFichaGrupo->dominio_grupo_id]);
-        
-        
-    // Dominios para prioridad_ficha
-        
-    // Dominios para estado_sesion
-    $sesionActiva = Dominio::create(['nombre' => 'activa', 'fk_dominio_grupo_id' => $estadoSesionGrupo->dominio_grupo_id]);
-    $sesionCerrada = Dominio::create(['nombre' => 'cerrada', 'fk_dominio_grupo_id' => $estadoSesionGrupo->dominio_grupo_id]);
-        
-    // Dominios para estado_seguimiento
-    $seguimientoEspera = Dominio::create(['nombre' => 'en_espera', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
-    $seguimientoLlamado = Dominio::create(['nombre' => 'llamado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
-    $seguimientoEnAtencion = Dominio::create(['nombre' => 'en_atencion', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
-    $seguimientoFinalizado = Dominio::create(['nombre' => 'finalizado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
-    $seguimientoAusente = Dominio::create(['nombre' => 'ausente', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
-    $seguimientoReasignado = Dominio::create(['nombre' => 'reasignado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
+        // Dominios para tipo_ficha
+        $tipoNormal = Dominio::firstOrCreate(['nombre' => 'normal', 'fk_dominio_grupo_id' => $tipoFichaGrupo->dominio_grupo_id]);
+        $tipoPreferencial = Dominio::firstOrCreate(['nombre' => 'preferencial', 'fk_dominio_grupo_id' => $tipoFichaGrupo->dominio_grupo_id]);
+
+        // Dominios para tipo_servicio
+        $servicioApostilla = Dominio::firstOrCreate(['nombre' => 'apostilla', 'fk_dominio_grupo_id' => $tipoServicioGrupo->dominio_grupo_id]);
+        $servicioLegalizaciones = Dominio::firstOrCreate(['nombre' => 'legalizaciones', 'fk_dominio_grupo_id' => $tipoServicioGrupo->dominio_grupo_id]);
+        $servicioVivencia = Dominio::firstOrCreate(['nombre' => 'vivencia', 'fk_dominio_grupo_id' => $tipoServicioGrupo->dominio_grupo_id]);
+        $servicioDevoluciones = Dominio::firstOrCreate(['nombre' => 'devoluciones', 'fk_dominio_grupo_id' => $tipoServicioGrupo->dominio_grupo_id]);
+
+        // Dominios para estado_sesion
+        $sesionActiva = Dominio::firstOrCreate(['nombre' => 'activa', 'fk_dominio_grupo_id' => $estadoSesionGrupo->dominio_grupo_id]);
+        $sesionCerrada = Dominio::firstOrCreate(['nombre' => 'cerrada', 'fk_dominio_grupo_id' => $estadoSesionGrupo->dominio_grupo_id]);
+
+        // Dominios para estado_seguimiento
+        $seguimientoEspera = Dominio::firstOrCreate(['nombre' => 'en_espera', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
+        $seguimientoLlamado = Dominio::firstOrCreate(['nombre' => 'llamado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
+        $seguimientoEnAtencion = Dominio::firstOrCreate(['nombre' => 'en_atencion', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
+        $seguimientoFinalizado = Dominio::firstOrCreate(['nombre' => 'finalizado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
+        $seguimientoAusente = Dominio::firstOrCreate(['nombre' => 'ausente', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
+        $seguimientoReasignado = Dominio::firstOrCreate(['nombre' => 'reasignado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
 
         // Organización principal
-        $org = Organizacion::create(['nombre' => 'Unidad Apostilla y Legalizaciones']);
+        $org = Organizacion::firstOrCreate(['nombre' => 'Unidad Apostilla y Legalizaciones']);
 
         // Sucursal Santa Cruz
-        $sucursal = Sucursal::create(['fk_organizacion_id' => $org->organizacion_id, 'nombre' => 'Santa Cruz']);
+        $sucursal = Sucursal::firstOrCreate(['fk_organizacion_id' => $org->organizacion_id, 'nombre' => 'Santa Cruz']);
 
         // Crear 10 ventanillas (inicialmente cerradas)
         $ventanillas = [];
         for ($i = 1; $i <= 10; $i++) {
-            $ventanillas[$i] = Ventanilla::create([
+            $ventanillas[$i] = Ventanilla::firstOrCreate([
                 'fk_sucursal_id' => $sucursal->sucursal_id,
                 'numero' => $i,
                 'estado' => \App\Enums\EstadoVentanillaEnum::CERRADA->value
@@ -82,46 +69,32 @@ class DatabaseSeeder extends Seeder
 
         // Crear 10 usuarios ventanilla con contraseña genérica 'ventanillaX123'
         for ($i = 1; $i <= 10; $i++) {
-            Usuario::create([
-                'fk_sucursal_id' => $sucursal->sucursal_id,
-                // 'fk_dominio_tipo_servicio_id' => null, // Eliminado, ya no se usa
-                'usuario' => 'ventanilla' . $i,
-                'nombre_completo' => 'Ventanilla ' . $i,
-                'correo_electronico' => 'ventanilla' . $i . '@ejemplo.com',
-                'password' => bcrypt('ventanilla' . $i . '123'),
-                'activo' => true,
-                'fk_persona_id' => 100 + $i,
-                'fk_ventanilla_id' => $ventanillas[$i]->ventanilla_id
-            ]);
+            Usuario::updateOrCreate(
+                ['usuario' => 'ventanilla' . $i],
+                [
+                    'fk_sucursal_id' => $sucursal->sucursal_id,
+                    'nombre_completo' => 'Ventanilla ' . $i,
+                    'correo_electronico' => 'ventanilla' . $i . '@ejemplo.com',
+                    'password' => bcrypt('ventanilla' . $i . '123'),
+                    'activo' => true,
+                    'fk_persona_id' => 100 + $i,
+                    'fk_ventanilla_id' => $ventanillas[$i]->ventanilla_id
+                ]
+            );
         }
 
         // Usuario extra 'fichas' (sin ventanilla asignada, contraseña: fichas123)
-        Usuario::create([
-            'fk_sucursal_id' => $sucursal->sucursal_id,
-            // 'fk_dominio_tipo_servicio_id' => null, // Eliminado, ya no se usa
-            'usuario' => 'fichas',
-            'nombre_completo' => 'Usuario Fichas',
-            'correo_electronico' => 'fichas@ejemplo.com',
-            'password' => bcrypt('fichas123'),
-            'activo' => true,
-            'fk_persona_id' => 999,
-            'fk_ventanilla_id' => null
-        ]);
-
-        // Poblar servicios base para la sucursal y ventanilla 1
-        $serviciosBase = ['apostilla', 'legalizaciones', 'vivencia', 'devoluciones'];
-        foreach ($serviciosBase as $nombreServicio) {
-            $dominioServicio = Dominio::where('nombre', $nombreServicio)->first();
-            if ($dominioServicio) {
-                \DB::table('servicios')->insert([
-                    'nombre' => $nombreServicio,
-                    'fk_ventanilla_id' => $ventanillas[1]->ventanilla_id, // Puedes cambiar a otra ventanilla si lo deseas
-                    'fk_dominio_tipo_servicio_id' => $dominioServicio->dominio_id,
-                    'fecha' => now()->toDateString(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-        }
+        Usuario::updateOrCreate(
+            ['usuario' => 'fichas'],
+            [
+                'fk_sucursal_id' => $sucursal->sucursal_id,
+                'nombre_completo' => 'Usuario Fichas',
+                'correo_electronico' => 'fichas@ejemplo.com',
+                'password' => bcrypt('fichas123'),
+                'activo' => true,
+                'fk_persona_id' => 999,
+                'fk_ventanilla_id' => null
+            ]
+        );
     }
 }
