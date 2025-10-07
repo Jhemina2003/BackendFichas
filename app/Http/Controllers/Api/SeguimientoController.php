@@ -141,12 +141,43 @@ class SeguimientoController extends Controller
         if (empty($request->justificativo)) {
             return response()->json(['message' => 'Debes ingresar una justificación para redirigir la ficha.'], 422);
         }
-        $ventanillaDestino = \App\Models\Ventanilla::findOrFail($request->fk_ventanilla_destino_id);
+        $ventanillaDestino = \App\Models\Ventanilla::with(['sucursal', 'tiposServicio'])->findOrFail($request->fk_ventanilla_destino_id);
+        
         // Validar ventanilla destino abierta
         if ($ventanillaDestino->estado === 'cerrada') {
             return response()->json(['message' => 'No se puede reasignar a una ventanilla cerrada.'], 409);
         }
+        
+        // VALIDACIÓN DE SEGURIDAD: Solo reasignar a ventanillas de la misma sucursal
         $ventanillaOrigen = $ficha->seguimientos()->latest('created_at')->first()?->ventanilla;
+        if (!$ventanillaOrigen) {
+            return response()->json(['message' => 'No se puede determinar la ventanilla de origen.'], 409);
+        }
+        
+        if ($ventanillaDestino->fk_sucursal_id !== $ventanillaOrigen->fk_sucursal_id) {
+            return response()->json([
+                'message' => 'No se puede reasignar fichas a ventanillas de otra sucursal.',
+                'ventanilla_origen_sucursal' => $ventanillaOrigen->fk_sucursal_id,
+                'ventanilla_destino_sucursal' => $ventanillaDestino->fk_sucursal_id
+            ], 409);
+        }
+        
+        // VALIDACIÓN DE LÓGICA DE NEGOCIO: La ventanilla destino debe atender el mismo tipo de servicio
+        $tipoServicioFicha = $ficha->fk_tipo_servicio_id;
+        $serviciosVentanillaDestino = $ventanillaDestino->tiposServicio->pluck('dominio_id')->toArray();
+        
+        if (!in_array($tipoServicioFicha, $serviciosVentanillaDestino)) {
+            // Obtener nombres de servicios para mensaje más claro
+            $servicioFicha = \App\Models\Dominio::find($tipoServicioFicha);
+            $nombresServicios = $ventanillaDestino->tiposServicio->pluck('nombre')->toArray();
+            
+            return response()->json([
+                'message' => 'La ventanilla destino no atiende el tipo de servicio de esta ficha.',
+                'servicio_ficha' => $servicioFicha ? $servicioFicha->nombre : 'Desconocido',
+                'servicios_ventanilla_destino' => $nombresServicios,
+                'ventanilla_destino' => $ventanillaDestino->numero
+            ], 409);
+        }
 
         // INICIO TRANSACCIÓN
         try {

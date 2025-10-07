@@ -31,6 +31,7 @@ class FilaFichaService
         if (empty($tiposServicioIds)) return null;
 
         // Obtener fichas SOLO de la misma sucursal, filtradas por estado actual calculado
+        // Ordenadas por fecha del último seguimiento "en_espera" para respetar reasignaciones
         $fichasPreferenciales = Ficha::whereHas('tipoFicha', function($q) {
                 $q->where('nombre', 'preferencial');
             })
@@ -40,11 +41,18 @@ class FilaFichaService
             ->whereHas('sesion.sucursal', function($q) use ($sucursalId) {
                 $q->where('sucursal_id', $sucursalId);
             })
-            ->orderBy('fecha_registro')
-            ->orderBy('ficha_id')
+            ->with(['seguimientos' => function($q) {
+                $q->whereHas('dominioEstado', function($subQ) {
+                    $subQ->where('nombre', 'en_espera');
+                })->latest('fecha');
+            }])
             ->get()
             ->filter(function($ficha) {
                 return $ficha->estado_actual === 'en_espera';
+            })
+            ->sortBy(function($ficha) {
+                $ultimoEnEspera = $ficha->seguimientos->first();
+                return $ultimoEnEspera ? $ultimoEnEspera->fecha : $ficha->fecha_registro;
             });
 
         $fichasNormales = Ficha::whereHas('tipoFicha', function($q) {
@@ -56,11 +64,18 @@ class FilaFichaService
             ->whereHas('sesion.sucursal', function($q) use ($sucursalId) {
                 $q->where('sucursal_id', $sucursalId);
             })
-            ->orderBy('fecha_registro')
-            ->orderBy('ficha_id')
+            ->with(['seguimientos' => function($q) {
+                $q->whereHas('dominioEstado', function($subQ) {
+                    $subQ->where('nombre', 'en_espera');
+                })->latest('fecha');
+            }])
             ->get()
             ->filter(function($ficha) {
                 return $ficha->estado_actual === 'en_espera';
+            })
+            ->sortBy(function($ficha) {
+                $ultimoEnEspera = $ficha->seguimientos->first();
+                return $ultimoEnEspera ? $ultimoEnEspera->fecha : $ficha->fecha_registro;
             });
 
         $fichaPreferencial = $fichasPreferenciales->first();

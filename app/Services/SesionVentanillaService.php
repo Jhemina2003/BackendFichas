@@ -74,21 +74,42 @@ class SesionVentanillaService
      */
     public function cerrarSesionVentanilla($fk_sesion_id, $fk_usuario_id, $fk_ventanilla_id): void
     {
-        $sesion = SesionVentanilla::where('fk_sesion_id', $fk_sesion_id)
-            ->where('fk_usuario_id', $fk_usuario_id)
-            ->where('fk_ventanilla_id', $fk_ventanilla_id)
-            ->where('estado', EstadoSesionVentanillaEnum::ACTIVA->value)
-            ->first();
-        if (!$sesion) {
-            throw new \Exception('No existe una sesión activa para cerrar.');
+        DB::beginTransaction();
+        try {
+            $sesion = SesionVentanilla::where('fk_sesion_id', $fk_sesion_id)
+                ->where('fk_usuario_id', $fk_usuario_id)
+                ->where('fk_ventanilla_id', $fk_ventanilla_id)
+                ->where('estado', EstadoSesionVentanillaEnum::ACTIVA->value)
+                ->first();
+            if (!$sesion) {
+                throw new \Exception('No existe una sesión activa para cerrar.');
+            }
+            
+            // Cerrar sesión de ventanilla
+            $sesion->estado = EstadoSesionVentanillaEnum::CERRADA->value;
+            $sesion->hora_cierre = Carbon::now();
+            $sesion->save();
+            
+            // Cambiar estado de la ventanilla a 'cerrada'
+            $ventanilla = \App\Models\Ventanilla::findOrFail($fk_ventanilla_id);
+            $ventanilla->estado = \App\Enums\EstadoVentanillaEnum::CERRADA->value;
+            $ventanilla->save();
+            
+            // LÓGICA CRÍTICA: Si todas las ventanillas de la sesión han cerrado, cerrar la sesión general
+            if ($this->todasCerradas($fk_sesion_id)) {
+                $sesionGeneral = \App\Models\Sesion::findOrFail($fk_sesion_id);
+                $estadoCerrada = \App\Models\Dominio::where('nombre', 'cerrada')->first();
+                if ($estadoCerrada) {
+                    $sesionGeneral->fk_dominio_estado_id = $estadoCerrada->dominio_id;
+                    $sesionGeneral->save();
+                }
+            }
+            
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
         }
-        $sesion->estado = EstadoSesionVentanillaEnum::CERRADA->value;
-        $sesion->hora_cierre = Carbon::now();
-        $sesion->save();
-        // Cambiar estado de la ventanilla a 'cerrada'
-        $ventanilla = \App\Models\Ventanilla::findOrFail($fk_ventanilla_id);
-        $ventanilla->estado = \App\Enums\EstadoVentanillaEnum::CERRADA->value;
-        $ventanilla->save();
     }
 
     /**

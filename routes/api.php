@@ -50,6 +50,7 @@ Route::middleware('auth:sanctum')->post('logout', [App\Http\Controllers\Api\Auth
 // Rutas para sesiones de ventanilla
 Route::middleware('auth:sanctum')->post('sesiones-ventanilla', [App\Http\Controllers\Api\SesionVentanillaController::class, 'iniciar']);
 Route::middleware('auth:sanctum')->post('sesiones-ventanilla/cerrar', [App\Http\Controllers\Api\SesionVentanillaController::class, 'cerrar']);
+Route::middleware('auth:sanctum')->get('sesiones-ventanilla/estado', [App\Http\Controllers\Api\SesionVentanillaController::class, 'estado']);
 
 // Puedes proteger rutas así:
 // Route::middleware('auth:sanctum')->get('usuario', function (Request $request) { return $request->user(); });
