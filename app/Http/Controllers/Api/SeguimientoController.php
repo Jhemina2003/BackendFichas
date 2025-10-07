@@ -14,17 +14,6 @@ class SeguimientoController extends Controller
     {
         $usuario = auth()->user();
         
-        // Validar que la ventanilla tenga una sesión activa
-        $sesionActiva = \App\Models\SesionVentanilla::where('fk_ventanilla_id', $usuario->fk_ventanilla_id)
-            ->where('fk_usuario_id', $usuario->usuario_id)
-            ->where('estado', 'activa')
-            ->whereNull('hora_cierre')
-            ->first();
-            
-        if (!$sesionActiva) {
-            return response()->json(['message' => 'Debe iniciar sesión en la ventanilla antes de realizar acciones'], 403);
-        }
-        
         // Buscar la última ficha llamada por esta ventanilla
         $ficha = $this->getFichaActualVentanilla($usuario);
         if (!$ficha) {
@@ -135,9 +124,9 @@ class SeguimientoController extends Controller
      */
     public function reasignarFicha(Request $request, $fichaId, SeguimientoService $seguimientoService)
     {
+        $usuario = auth()->user();
         $request->validate([
             'fk_ventanilla_destino_id' => 'required|exists:ventanillas,ventanilla_id',
-            'fk_usuario_id' => 'required|exists:usuarios,usuario_id',
             'justificativo' => 'required|string|min:5',
         ]);
         $ficha = $this->findFichaByIdOrNumero($fichaId);
@@ -146,7 +135,7 @@ class SeguimientoController extends Controller
         if ($estadoActual !== 'en_atencion') {
             return response()->json(['message' => 'Solo se puede redirigir una ficha que está siendo atendida actualmente.'], 409);
         }
-        if (!$ultimoEnAtencion || $ultimoEnAtencion->fk_ventanilla_id != $request->fk_ventanilla_id) {
+        if (!$ultimoEnAtencion || $ultimoEnAtencion->fk_ventanilla_id != $usuario->fk_ventanilla_id) {
             return response()->json(['message' => 'Solo la ventanilla que está atendiendo la ficha puede realizar la redirección.'], 409);
         }
         if (empty($request->justificativo)) {
@@ -167,7 +156,7 @@ class SeguimientoController extends Controller
             $seguimiento = $seguimientoService->crearSeguimiento([
                 'fk_ficha_id' => $ficha->ficha_id,
                 'fk_ventanilla_id' => $ventanillaDestino->ventanilla_id,
-                'fk_usuario_id' => $request->fk_usuario_id,
+                'fk_usuario_id' => $usuario->usuario_id,
                 'estado' => 'reasignado',
                 'fk_dominio_accion_id' => \App\Models\Dominio::where('nombre', 'reasignado')->first()?->dominio_id,
                 'fecha' => now(),
@@ -182,7 +171,7 @@ class SeguimientoController extends Controller
             $seguimientoEspera = $seguimientoService->crearSeguimiento([
                 'fk_ficha_id' => $ficha->ficha_id,
                 'fk_ventanilla_id' => $ventanillaDestino->ventanilla_id,
-                'fk_usuario_id' => $request->fk_usuario_id,
+                'fk_usuario_id' => $usuario->usuario_id,
                 'estado' => 'en_espera',
                 'fk_dominio_accion_id' => $dominioEspera?->dominio_id,
                 'fecha' => now()->subSecond(),

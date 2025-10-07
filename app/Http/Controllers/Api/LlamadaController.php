@@ -42,6 +42,13 @@ class LlamadaController extends Controller
                 return response()->json(['message' => 'Debe iniciar sesión en la ventanilla antes de llamar fichas'], 403);
             }
             
+            // Validar que no tenga una ficha activa (llamado o en_atencion)
+            $fichaActiva = app(\App\Http\Controllers\Api\SeguimientoController::class)
+                ->getFichaActualVentanilla($usuario);
+            if ($fichaActiva) {
+                return response()->json(['message' => 'No puede llamar una nueva ficha mientras tenga una ficha activa. Debe finalizar la ficha actual primero.'], 409);
+            }
+            
             $ficha = $this->filaFichaService->siguienteFichaEnEsperaPorVentanilla($ventanillaId);
             if (!$ficha) {
                 return response()->json(['message' => 'No hay fichas en espera para los servicios activos de esta ventanilla'], 404);

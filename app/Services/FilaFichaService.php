@@ -68,16 +68,20 @@ class FilaFichaService
 
         // Lógica 2 preferenciales, 2 normales
         if (
-            ($counter["preferencial"] < 2 && $fichaPreferencial) || !$fichaNormal
+            ($counter["preferencial"] < 2 && $fichaPreferencial) || (!$fichaNormal && $fichaPreferencial)
         ) {
             $counter["preferencial"]++;
-            if ($counter["preferencial"] == 2) $counter["normal"] = 0;
+            if ($counter["preferencial"] == 2) {
+                $counter["normal"] = 0; // Reset contador normales cuando se completan 2 preferenciales
+            }
             file_put_contents($counterFile, json_encode($counter));
             return $fichaPreferencial;
         }
         if ($counter["normal"] < 2 && $fichaNormal) {
             $counter["normal"]++;
-            if ($counter["normal"] == 2) $counter["preferencial"] = 0;
+            if ($counter["normal"] == 2) {
+                $counter["preferencial"] = 0; // Reset contador preferenciales cuando se completan 2 normales
+            }
             file_put_contents($counterFile, json_encode($counter));
             return $fichaNormal;
         }
