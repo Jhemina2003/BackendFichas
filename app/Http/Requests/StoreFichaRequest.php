@@ -16,13 +16,13 @@ class StoreFichaRequest extends FormRequest
     }
 
         /**
-         * Ahora se aceptan los valores string de Enum en vez de IDs para tipo_ficha, tipo_servicio y prioridad_ficha.
-         * Ejemplo: tipo_ficha: 'normal', tipo_servicio: 'apostilla', prioridad_ficha: 'tercera_edad'
+         * Los valores string de Enum se aceptan para tipo_ficha y tipo_servicio.
+         * La sucursal se obtiene automáticamente del usuario autenticado.
+         * Ejemplo: tipo_ficha: 'normal', tipo_servicio: 'apostilla'
          */
         public function rules()
         {
             return [
-                'fk_sucursal_id' => 'required|exists:sucursales,sucursal_id',
                 'tipo_ficha' => 'required|string|in:' . implode(',', array_column(TipoFichaEnum::cases(), 'value')),
                 'tipo_servicio' => 'required|string|in:' . implode(',', array_column(TipoServicioEnum::cases(), 'value')),
             ];

@@ -22,18 +22,23 @@ class FilaFichaService
         $dominioEspera = Dominio::where('nombre', 'en_espera')->first();
         if (!$dominioEspera) return null;
 
-        // Obtener los tipos de servicio que puede atender la ventanilla
-        $ventanilla = \App\Models\Ventanilla::find($ventanillaId);
-        if (!$ventanilla) return null;
+        // Obtener la ventanilla y su sucursal para filtrar correctamente
+        $ventanilla = \App\Models\Ventanilla::with('sucursal')->find($ventanillaId);
+        if (!$ventanilla || !$ventanilla->sucursal) return null;
+        
+        $sucursalId = $ventanilla->sucursal->sucursal_id;
         $tiposServicioIds = $ventanilla->tiposServicio()->pluck('dominios.dominio_id')->toArray();
         if (empty($tiposServicioIds)) return null;
 
-        // Obtener todas las fichas y filtrar por estado actual calculado
+        // Obtener fichas SOLO de la misma sucursal, filtradas por estado actual calculado
         $fichasPreferenciales = Ficha::whereHas('tipoFicha', function($q) {
                 $q->where('nombre', 'preferencial');
             })
             ->whereHas('tipoServicio', function($q) use ($tiposServicioIds) {
                 $q->whereIn('dominio_id', $tiposServicioIds);
+            })
+            ->whereHas('sesion.sucursal', function($q) use ($sucursalId) {
+                $q->where('sucursal_id', $sucursalId);
             })
             ->orderBy('fecha_registro')
             ->orderBy('ficha_id')
@@ -48,6 +53,9 @@ class FilaFichaService
             ->whereHas('tipoServicio', function($q) use ($tiposServicioIds) {
                 $q->whereIn('dominio_id', $tiposServicioIds);
             })
+            ->whereHas('sesion.sucursal', function($q) use ($sucursalId) {
+                $q->where('sucursal_id', $sucursalId);
+            })
             ->orderBy('fecha_registro')
             ->orderBy('ficha_id')
             ->get()
@@ -58,47 +66,71 @@ class FilaFichaService
         $fichaPreferencial = $fichasPreferenciales->first();
         $fichaNormal = $fichasNormales->first();
 
-        // Leer el contador global de atención desde storage
+        // Leer el contador global de atención con lock para evitar condiciones de carrera
         $counterFile = storage_path('app/turno_counter.txt');
+        $lockFile = storage_path('app/turno_counter.lock');
+        
         $counter = ["preferencial" => 0, "normal" => 0];
-        if (file_exists($counterFile)) {
-            $data = @json_decode(file_get_contents($counterFile), true);
-            if (is_array($data)) $counter = $data;
-        }
-
-        // Lógica 2 preferenciales, 2 normales
-        if (
-            ($counter["preferencial"] < 2 && $fichaPreferencial) || (!$fichaNormal && $fichaPreferencial)
-        ) {
-            $counter["preferencial"]++;
-            if ($counter["preferencial"] == 2) {
-                $counter["normal"] = 0; // Reset contador normales cuando se completan 2 preferenciales
+        
+        // Intentar obtener lock por máximo 5 segundos
+        $lockHandle = fopen($lockFile, 'w');
+        if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
+            // Si no puede obtener lock inmediatamente, esperar un poco
+            usleep(100000); // 100ms
+            if (!flock($lockHandle, LOCK_EX)) {
+                fclose($lockHandle);
+                throw new \Exception('No se pudo obtener lock para el contador de turnos');
             }
-            file_put_contents($counterFile, json_encode($counter));
-            return $fichaPreferencial;
         }
-        if ($counter["normal"] < 2 && $fichaNormal) {
-            $counter["normal"]++;
-            if ($counter["normal"] == 2) {
-                $counter["preferencial"] = 0; // Reset contador preferenciales cuando se completan 2 normales
+        
+        try {
+            if (file_exists($counterFile)) {
+                $content = file_get_contents($counterFile);
+                if ($content !== false) {
+                    $data = json_decode($content, true);
+                    if (is_array($data) && isset($data['preferencial']) && isset($data['normal'])) {
+                        $counter = $data;
+                    }
+                }
             }
-            file_put_contents($counterFile, json_encode($counter));
-            return $fichaNormal;
+            
+            // Lógica 2 preferenciales, 2 normales (sin cambios)
+            $fichaSeleccionada = null;
+            
+            if (
+                ($counter["preferencial"] < 2 && $fichaPreferencial) || (!$fichaNormal && $fichaPreferencial)
+            ) {
+                $counter["preferencial"]++;
+                if ($counter["preferencial"] == 2) {
+                    $counter["normal"] = 0;
+                }
+                $fichaSeleccionada = $fichaPreferencial;
+            } elseif ($counter["normal"] < 2 && $fichaNormal) {
+                $counter["normal"]++;
+                if ($counter["normal"] == 2) {
+                    $counter["preferencial"] = 0;
+                }
+                $fichaSeleccionada = $fichaNormal;
+            } elseif ($fichaPreferencial) {
+                $counter["preferencial"] = 1;
+                $counter["normal"] = 0;
+                $fichaSeleccionada = $fichaPreferencial;
+            } elseif ($fichaNormal) {
+                $counter["normal"] = 1;
+                $counter["preferencial"] = 0;
+                $fichaSeleccionada = $fichaNormal;
+            }
+            
+            // Escribir contador actualizado
+            if ($fichaSeleccionada) {
+                file_put_contents($counterFile, json_encode($counter));
+            }
+            
+        } finally {
+            flock($lockHandle, LOCK_UN);
+            fclose($lockHandle);
         }
-        // Si solo hay preferenciales
-        if ($fichaPreferencial) {
-            $counter["preferencial"] = 1;
-            $counter["normal"] = 0;
-            file_put_contents($counterFile, json_encode($counter));
-            return $fichaPreferencial;
-        }
-        // Si solo hay normales
-        if ($fichaNormal) {
-            $counter["normal"] = 1;
-            $counter["preferencial"] = 0;
-            file_put_contents($counterFile, json_encode($counter));
-            return $fichaNormal;
-        }
-        return null;
+        
+        return $fichaSeleccionada;
     }
 }

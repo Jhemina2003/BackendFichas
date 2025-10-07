@@ -20,9 +20,10 @@ Route::middleware('auth:sanctum')->get('ventanilla/dashboard', [App\Http\Control
 Route::apiResource('usuarios', App\Http\Controllers\Api\UsuarioController::class);
 // Rutas específicas de fichas (deben ir ANTES del apiResource)
 Route::get('fichas/estadisticas', [App\Http\Controllers\Api\FichaController::class, 'estadisticas']);
-Route::apiResource('fichas', App\Http\Controllers\Api\FichaController::class);
-Route::apiResource('llamadas', App\Http\Controllers\Api\LlamadaController::class);
+Route::middleware('auth:sanctum')->apiResource('fichas', App\Http\Controllers\Api\FichaController::class);
+// Rutas específicas de llamadas (deben ir ANTES del apiResource)
 Route::middleware('auth:sanctum')->post('llamadas/llamar-siguiente', [App\Http\Controllers\Api\LlamadaController::class, 'llamarSiguiente']);
+Route::middleware('auth:sanctum')->apiResource('llamadas', App\Http\Controllers\Api\LlamadaController::class);
 Route::apiResource('dominios', App\Http\Controllers\Api\DominioController::class)->only(['index', 'show']);
 Route::apiResource('dominios-grupo', App\Http\Controllers\Api\DominioGrupoController::class)->only(['index', 'show']);
 Route::apiResource('roles', App\Http\Controllers\Api\RolController::class)->only(['index', 'show']);

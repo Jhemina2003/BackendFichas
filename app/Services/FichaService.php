@@ -36,38 +36,47 @@ class FichaService
             }
         }
 
+        // Generar número correlativo ANTES de eliminar fk_sucursal_id
+        $data['numero'] = $this->generarCorrelativoFicha($data);
+        
         // Eliminar fk_sucursal_id porque no existe en la tabla fichas
         unset($data['fk_sucursal_id']);
 
-        $data['numero'] = $this->generarCorrelativoFicha($data);
         $ficha = Ficha::create($data);
 
         // Crear seguimiento inicial en_espera
         $dominioEspera = \App\Models\Dominio::where('nombre', 'en_espera')->first();
-        if ($dominioEspera) {
-            \App\Models\Seguimiento::create([
-                'fk_ficha_id' => $ficha->ficha_id,
-                'fk_ventanilla_id' => null,
-                'fk_usuario_id' => null,
-                'fk_dominio_estado_id' => $dominioEspera->dominio_id,
-                'fk_dominio_accion_id' => $dominioEspera->dominio_id,
-                'fecha' => now(),
-                'observacion' => 'Ficha creada y en espera.'
-            ]);
+        if (!$dominioEspera) {
+            throw new \Exception('Error del sistema: dominio "en_espera" no encontrado en la base de datos. Contacte al administrador.');
         }
+        
+        \App\Models\Seguimiento::create([
+            'fk_ficha_id' => $ficha->ficha_id,
+            'fk_ventanilla_id' => null,
+            'fk_usuario_id' => null,
+            'fk_dominio_estado_id' => $dominioEspera->dominio_id,
+            'fk_dominio_accion_id' => $dominioEspera->dominio_id,
+            'fecha' => now(),
+            'observacion' => 'Ficha creada y en espera.'
+        ]);
         return $ficha;
     }
     /**
-     * Genera el número correlativo (integer) de ficha para el día, tipo y prioridad.
+     * Genera el número correlativo (integer) de ficha para el día, tipo y prioridad POR SUCURSAL.
      */
     private function generarCorrelativoFicha(array $data): int
     {
         $fecha = isset($data['fecha_registro']) ? date('Y-m-d', strtotime($data['fecha_registro'])) : date('Y-m-d');
-        // El correlativo es independiente para cada combinación de tipo de ficha y tipo de servicio, por día
+        
+        // El correlativo es independiente para cada combinación de tipo de ficha, tipo de servicio y SUCURSAL, por día
         $maxNumero = Ficha::where('fk_tipo_ficha_id', $data['fk_tipo_ficha_id'])
             ->where('fk_tipo_servicio_id', $data['fk_tipo_servicio_id'])
             ->whereDate('fecha_registro', $fecha)
+            ->whereHas('sesion', function($q) use ($data) {
+                $q->where('fk_sucursal_id', $data['fk_sucursal_id']);
+            })
             ->max('numero');
+            
         return $maxNumero ? ($maxNumero + 1) : 1;
     }
 
@@ -82,6 +91,8 @@ class FichaService
         $cambioServicio = isset($data['fk_tipo_servicio_id']) && $data['fk_tipo_servicio_id'] != $ficha->fk_tipo_servicio_id;
         if ($cambioTipo || $cambioServicio) {
             $nuevoData = array_merge($ficha->toArray(), $data);
+            // Agregar la sucursal de la sesión actual de la ficha para el correlativo
+            $nuevoData['fk_sucursal_id'] = $ficha->sesion->fk_sucursal_id;
             $data['numero'] = $this->generarCorrelativoFicha($nuevoData);
         }
         $ficha->update($data);

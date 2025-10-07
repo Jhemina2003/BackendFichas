@@ -18,6 +18,7 @@ class FichaController extends Controller
     public function estadisticas()
     {
         try {
+            $usuario = auth()->user();
             $estados = ['en_espera', 'finalizado', 'ausente'];
             $result = [];
             $hoy = now()->toDateString();
@@ -35,6 +36,13 @@ class FichaController extends Controller
                 $query = \App\Models\Seguimiento::where('fk_dominio_estado_id', $dominio->dominio_id)
                     ->whereDate('fecha', $hoy);
                     
+                // FILTRO DE SEGURIDAD: Solo seguimientos de fichas de la misma sucursal
+                if ($usuario && $usuario->fk_sucursal_id) {
+                    $query->whereHas('ficha.sesion.sucursal', function($q) use ($usuario) {
+                        $q->where('sucursal_id', $usuario->fk_sucursal_id);
+                    });
+                }
+                    
                 if ($ventanillaId) {
                     $query->where('fk_ventanilla_id', $ventanillaId);
                 }
@@ -50,7 +58,16 @@ class FichaController extends Controller
 // ...existing code...
     public function index(Request $request)
     {
-    $query = Ficha::with(['usuario', 'sesion', 'tipoFicha', 'tipoServicio']);
+        $usuario = auth()->user();
+        $query = Ficha::with(['usuario', 'sesion', 'tipoFicha', 'tipoServicio']);
+        
+        // FILTRO DE SEGURIDAD: Solo fichas de la misma sucursal del usuario
+        if ($usuario && $usuario->fk_sucursal_id) {
+            $query->whereHas('sesion.sucursal', function($q) use ($usuario) {
+                $q->where('sucursal_id', $usuario->fk_sucursal_id);
+            });
+        }
+        
         if ($request->has('sesion_id')) {
             $query->where('fk_sesion_id', $request->sesion_id);
         }
@@ -89,7 +106,25 @@ class FichaController extends Controller
     public function store(\App\Http\Requests\StoreFichaRequest $request, FichaService $fichaService)
     {
         try {
-            $ficha = $fichaService->crearFicha($request->validated());
+            // Obtener automáticamente la sucursal del usuario autenticado
+            $usuario = auth()->user();
+            if (!$usuario) {
+                return response()->json([
+                    'message' => 'Usuario no autenticado. Debe iniciar sesión primero.'
+                ], 401);
+            }
+            
+            if (!$usuario->fk_sucursal_id) {
+                return response()->json([
+                    'message' => 'El usuario no tiene una sucursal asignada. Contacte al administrador.'
+                ], 422);
+            }
+            
+            // Agregar la sucursal del usuario a los datos validados
+            $data = $request->validated();
+            $data['fk_sucursal_id'] = $usuario->fk_sucursal_id;
+            
+            $ficha = $fichaService->crearFicha($data);
             $ficha = $ficha->fresh(['sesion.sucursal.organizacion']);
 
             $organizacionNombre = $ficha->sesion && $ficha->sesion->sucursal && $ficha->sesion->sucursal->organizacion

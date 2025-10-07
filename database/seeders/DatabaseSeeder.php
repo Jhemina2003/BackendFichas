@@ -87,12 +87,55 @@ class DatabaseSeeder extends Seeder
         Usuario::updateOrCreate(
             ['usuario' => 'fichas'],
             [
-                'fk_sucursal_id' => $sucursal->sucursal_id,
+                'fk_sucursal_id' => $sucursal->sucursal_id, // Santa Cruz
                 'nombre_completo' => 'Usuario Fichas',
                 'correo_electronico' => 'fichas@ejemplo.com',
                 'password' => bcrypt('fichas123'),
                 'activo' => true,
                 'fk_persona_id' => 999,
+                'fk_ventanilla_id' => null
+            ]
+        );
+
+        // Sucursal La Paz
+        $sucursalLaPaz = Sucursal::firstOrCreate(['fk_organizacion_id' => $org->organizacion_id, 'nombre' => 'La Paz']);
+
+        // Crear 5 ventanillas para La Paz (inicialmente cerradas)
+        $ventanillasLaPaz = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $ventanillasLaPaz[$i] = Ventanilla::firstOrCreate([
+                'fk_sucursal_id' => $sucursalLaPaz->sucursal_id,
+                'numero' => $i,
+                'estado' => \App\Enums\EstadoVentanillaEnum::CERRADA->value
+            ]);
+        }
+
+        // Crear 5 usuarios ventanilla para La Paz con contraseña genérica 'lapazX123'
+        for ($i = 1; $i <= 5; $i++) {
+            Usuario::updateOrCreate(
+                ['usuario' => 'lapaz' . $i],
+                [
+                    'fk_sucursal_id' => $sucursalLaPaz->sucursal_id,
+                    'nombre_completo' => 'Ventanilla La Paz ' . $i,
+                    'correo_electronico' => 'lapaz' . $i . '@ejemplo.com',
+                    'password' => bcrypt('lapaz' . $i . '123'),
+                    'activo' => true,
+                    'fk_persona_id' => 200 + $i,
+                    'fk_ventanilla_id' => $ventanillasLaPaz[$i]->ventanilla_id
+                ]
+            );
+        }
+
+        // Usuario extra 'fichaslapaz' para La Paz (sin ventanilla asignada, contraseña: fichaslapaz123)
+        Usuario::updateOrCreate(
+            ['usuario' => 'fichaslapaz'],
+            [
+                'fk_sucursal_id' => $sucursalLaPaz->sucursal_id, // La Paz
+                'nombre_completo' => 'Usuario Fichas La Paz',
+                'correo_electronico' => 'fichaslapaz@ejemplo.com',
+                'password' => bcrypt('fichaslapaz123'),
+                'activo' => true,
+                'fk_persona_id' => 299,
                 'fk_ventanilla_id' => null
             ]
         );

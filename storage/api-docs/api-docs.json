@@ -1,0 +1,457 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Sistema de Fichas API",
+        "description": "API para gestión de fichas de atención al cliente con colas inteligentes y seguimiento completo",
+        "contact": {
+            "name": "Equipo de Desarrollo",
+            "email": "admin@sistemadefichas.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000/api",
+            "description": "Servidor de desarrollo local"
+        }
+    ],
+    "paths": {
+        "/fichas/estadisticas": {
+            "get": {
+                "tags": [
+                    "Fichas"
+                ],
+                "summary": "Obtener estadísticas de fichas",
+                "description": "Devuelve la cantidad de fichas en espera, finalizadas y ausentes para la sucursal del usuario",
+                "operationId": "getFichasEstadisticas",
+                "parameters": [
+                    {
+                        "name": "ventanilla_id",
+                        "in": "query",
+                        "description": "ID de ventanilla para filtrar estadísticas (opcional)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Estadísticas obtenidas exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "en_espera": {
+                                            "type": "integer",
+                                            "example": 15
+                                        },
+                                        "finalizado": {
+                                            "type": "integer",
+                                            "example": 45
+                                        },
+                                        "ausente": {
+                                            "type": "integer",
+                                            "example": 3
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/fichas": {
+            "post": {
+                "tags": [
+                    "Fichas"
+                ],
+                "summary": "Crear una nueva ficha",
+                "description": "Crea una nueva ficha automáticamente para la sucursal del usuario autenticado",
+                "operationId": "createFicha",
+                "requestBody": {
+                    "description": "Datos para crear la ficha",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "tipo_ficha",
+                                    "tipo_servicio"
+                                ],
+                                "properties": {
+                                    "tipo_ficha": {
+                                        "description": "Tipo de ficha",
+                                        "type": "string",
+                                        "enum": [
+                                            "normal",
+                                            "preferencial"
+                                        ],
+                                        "example": "normal"
+                                    },
+                                    "tipo_servicio": {
+                                        "description": "Tipo de servicio solicitado",
+                                        "type": "string",
+                                        "enum": [
+                                            "apostilla",
+                                            "legalizaciones",
+                                            "vivencia",
+                                            "devoluciones"
+                                        ],
+                                        "example": "apostilla"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Ficha creada exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "numero_formateado": {
+                                            "type": "string",
+                                            "example": "APOS.1"
+                                        },
+                                        "fecha_registro": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "example": "2025-10-07T15:30:00.000000Z"
+                                        },
+                                        "organizacion": {
+                                            "type": "string",
+                                            "example": "Mi Organización"
+                                        },
+                                        "sucursal": {
+                                            "type": "string",
+                                            "example": "Sucursal Central"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "422": {
+                        "description": "Datos inválidos o usuario sin sucursal asignada"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ventanilla/llamar-siguiente": {
+            "post": {
+                "tags": [
+                    "Llamadas"
+                ],
+                "summary": "Llamar la siguiente ficha en cola",
+                "description": "Llama a la siguiente ficha en espera respetando la secuencia 2x2 (2 preferenciales, 2 normales) y filtrando por servicios de la ventanilla",
+                "operationId": "llamarSiguienteFicha",
+                "responses": {
+                    "201": {
+                        "description": "Ficha llamada exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "llamada": {
+                                            "properties": {
+                                                "llamada_id": {
+                                                    "type": "integer",
+                                                    "example": 123
+                                                },
+                                                "fk_ficha_id": {
+                                                    "type": "integer",
+                                                    "example": 456
+                                                },
+                                                "fk_ventanilla_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "fecha": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "ficha": {
+                                            "properties": {
+                                                "ficha_id": {
+                                                    "type": "integer",
+                                                    "example": 456
+                                                },
+                                                "numero_formateado": {
+                                                    "type": "string",
+                                                    "example": "P.APOS.1"
+                                                },
+                                                "estado_actual": {
+                                                    "type": "string",
+                                                    "example": "llamado"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Usuario sin ventanilla asignada o sin sesión activa"
+                    },
+                    "404": {
+                        "description": "No hay fichas en espera para esta ventanilla"
+                    },
+                    "409": {
+                        "description": "La ventanilla ya tiene una ficha activa o la ficha fue llamada por otro operador"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ventanilla/rellamar": {
+            "post": {
+                "tags": [
+                    "Seguimiento"
+                ],
+                "summary": "Rellamar una ficha",
+                "description": "Incrementa el contador de llamadas de la ficha activa en estado 'llamado'",
+                "operationId": "rellamarFicha",
+                "responses": {
+                    "201": {
+                        "description": "Ficha rellamada exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "seguimiento_id": {
+                                            "type": "integer",
+                                            "example": 789
+                                        },
+                                        "fk_ficha_id": {
+                                            "type": "integer",
+                                            "example": 456
+                                        },
+                                        "estado": {
+                                            "type": "string",
+                                            "example": "llamado"
+                                        },
+                                        "observacion": {
+                                            "type": "string",
+                                            "example": "Ficha rellamada. Total llamadas: 2"
+                                        },
+                                        "fecha": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No hay ninguna ficha activa para esta ventanilla"
+                    },
+                    "409": {
+                        "description": "Solo se puede rellamar una ficha en estado 'llamado'"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ventanilla/observacion": {
+            "post": {
+                "tags": [
+                    "Seguimiento"
+                ],
+                "summary": "Finalizar ficha con observación",
+                "description": "Agrega una observación obligatoria y finaliza la ficha en atención",
+                "operationId": "agregarObservacion",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "observacion"
+                                ],
+                                "properties": {
+                                    "observacion": {
+                                        "description": "Observación detallada del servicio brindado",
+                                        "type": "string",
+                                        "minLength": 5,
+                                        "example": "Cliente atendido satisfactoriamente, documentos revisados y aprobados"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Observación agregada y ficha finalizada exitosamente"
+                    },
+                    "404": {
+                        "description": "No hay ninguna ficha activa para esta ventanilla"
+                    },
+                    "409": {
+                        "description": "Solo se puede agregar observación a una ficha en atención"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ventanilla/redirigir": {
+            "post": {
+                "tags": [
+                    "Seguimiento"
+                ],
+                "summary": "Redirigir ficha (reasignar y finalizar)",
+                "description": "Marca la ficha como reasignada por un motivo específico y la finaliza (NO la envía a otra ventanilla)",
+                "operationId": "redirigirFicha",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "justificativo"
+                                ],
+                                "properties": {
+                                    "justificativo": {
+                                        "description": "Motivo por el cual se redirige la ficha",
+                                        "type": "string",
+                                        "minLength": 5,
+                                        "example": "Cliente requiere documentación adicional que no está disponible en esta ventanilla"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Ficha redirigida y finalizada exitosamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "seguimiento_redirigir": {
+                                            "type": "object"
+                                        },
+                                        "seguimiento_final": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No hay ninguna ficha activa para esta ventanilla"
+                    },
+                    "409": {
+                        "description": "Solo se puede redirigir una ficha en atención"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/ventanilla/en-atencion": {
+            "post": {
+                "tags": [
+                    "Seguimiento"
+                ],
+                "summary": "Marcar ficha como en atención",
+                "description": "Cambia el estado de la ficha de 'llamado' a 'en_atencion'",
+                "operationId": "marcarEnAtencion",
+                "responses": {
+                    "201": {
+                        "description": "Ficha marcada en atención exitosamente"
+                    },
+                    "404": {
+                        "description": "No hay ninguna ficha activa para esta ventanilla"
+                    },
+                    "409": {
+                        "description": "Solo se puede poner en atención una ficha que ha sido llamada"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "description": "Autenticación mediante Laravel Sanctum",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Fichas",
+            "description": "Gestión de fichas: crear, listar, estadísticas"
+        },
+        {
+            "name": "Llamadas",
+            "description": "Sistema de llamado de fichas y gestión de colas"
+        },
+        {
+            "name": "Seguimiento",
+            "description": "Workflow de atención: rellamar, atender, finalizar, redirigir"
+        }
+    ]
+}
