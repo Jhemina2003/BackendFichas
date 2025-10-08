@@ -36,6 +36,19 @@ class FichaService
             }
         }
 
+        // --- Validación de servicios con ventanilla activa ---
+        if (isset($data['fk_sucursal_id']) && isset($data['fk_tipo_servicio_id'])) {
+            $ventanillasActivas = \App\Models\Ventanilla::where('fk_sucursal_id', $data['fk_sucursal_id'])
+                ->where('estado', \App\Models\Ventanilla::ESTADO_ABIERTA)
+                ->whereHas('tiposServicio', function($q) use ($data) {
+                    $q->where('ventanilla_tipo_servicio.dominio_id', $data['fk_tipo_servicio_id']);
+                })
+                ->exists();
+            if (!$ventanillasActivas) {
+                throw new \Exception('No se puede crear la ficha: no hay ventanilla activa que atienda el servicio seleccionado en la sucursal.');
+            }
+        }
+
         // Generar número correlativo ANTES de eliminar fk_sucursal_id
         $data['numero'] = $this->generarCorrelativoFicha($data);
         

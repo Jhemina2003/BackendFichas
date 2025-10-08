@@ -8,7 +8,7 @@ Route::middleware('auth:sanctum')->post('ventanilla/en-atencion', [App\Http\Cont
 Route::middleware('auth:sanctum')->post('ventanilla/finalizar', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarFinalizada']);
 Route::middleware('auth:sanctum')->post('ventanilla/ausente', [App\Http\Controllers\Api\SeguimientoController::class, 'marcarAusente']);
 Route::middleware('auth:sanctum')->post('ventanilla/observacion', [App\Http\Controllers\Api\SeguimientoController::class, 'observacion']);
-Route::middleware('auth:sanctum')->post('ventanilla/redirigir', [App\Http\Controllers\Api\SeguimientoController::class, 'redirigir']);
+Route::middleware('auth:sanctum')->post('ventanilla/retornar-espera', [App\Http\Controllers\Api\SeguimientoController::class, 'retornarAEspera']);
 Route::middleware('auth:sanctum')->get('ventanilla/ficha-actual', [App\Http\Controllers\Api\VentanillaController::class, 'fichaActual']);
 
 // Importante: esta ruta debe ir antes del apiResource de ventanillas
@@ -38,8 +38,7 @@ Route::apiResource('organizaciones', App\Http\Controllers\Api\OrganizacionContro
 Route::post('sesiones/{id}/reabrir', [App\Http\Controllers\Api\SesionController::class, 'reabrir']);
 Route::apiResource('sesiones', App\Http\Controllers\Api\SesionController::class);
 Route::apiResource('seguimientos', App\Http\Controllers\Api\SeguimientoController::class)->only(['index', 'show', 'store']);
-// Acciones de atención sobre fichas (conservar para reasignar y historial)
-Route::post('fichas/{ficha}/reasignar', [App\Http\Controllers\Api\SeguimientoController::class, 'reasignarFicha']);
+// Acciones de atención sobre fichas (solo historial)
 Route::get('fichas/{ficha}/historial', [App\Http\Controllers\Api\SeguimientoController::class, 'historial']);
 Route::apiResource('asignaciones', App\Http\Controllers\Api\AsignacionController::class);
 

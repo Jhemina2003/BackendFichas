@@ -74,8 +74,8 @@ class SeguimientoController extends Controller
         return response()->json($seguimiento, 201);
     }
 
-    // Redirigir ficha (reasignado y finalizado)
-    public function redirigir(Request $request, SeguimientoService $seguimientoService)
+    // Retornar ficha a espera con justificativo
+    public function retornarAEspera(Request $request, SeguimientoService $seguimientoService)
     {
         $usuario = auth()->user();
         $request->validate([
@@ -89,138 +89,35 @@ class SeguimientoController extends Controller
         
         $estadoActual = $ficha->estado_actual;
         if ($estadoActual !== 'en_atencion') {
-            return response()->json(['message' => 'Solo se puede redirigir una ficha en atención.'], 409);
+            return response()->json(['message' => 'Solo se puede retornar a espera una ficha en atención.'], 409);
         }
         
-        $dominioReasignado = \App\Models\Dominio::where('nombre', 'reasignado')->first();
-        $seguimiento = $seguimientoService->crearSeguimiento([
-            'fk_ficha_id' => $ficha->ficha_id,
-            'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
-            'fk_usuario_id' => $usuario->usuario_id,
-            'estado' => 'reasignado',
-            'fk_dominio_accion_id' => $dominioReasignado?->dominio_id,
-            'fecha' => now(),
-            'observacion' => 'Ficha redirigida. Motivo: ' . $request->justificativo
-        ]);
-        // Finalizar
-        $dominioFinalizado = \App\Models\Dominio::where('nombre', 'finalizado')->first();
-        $seguimientoFinal = $seguimientoService->crearSeguimiento([
-            'fk_ficha_id' => $ficha->ficha_id,
-            'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
-            'fk_usuario_id' => $usuario->usuario_id,
-            'estado' => 'finalizado',
-            'fk_dominio_accion_id' => $dominioFinalizado?->dominio_id,
-            'fecha' => now(),
-            'observacion' => 'Ficha finalizada tras redirección.'
-        ]);
-        return response()->json([
-            'seguimiento_redirigir' => $seguimiento,
-            'seguimiento_final' => $seguimientoFinal
-        ], 201);
-    }
-    /**
-     * Reasigna una ficha a otra ventanilla, insertándola como primera en la cola de espera.
-     * Reglas: no permite reasignar a ventanilla cerrada/bloqueada, registra seguimiento, cambia estado a 'en_espera'.
-     */
-    public function reasignarFicha(Request $request, $fichaId, SeguimientoService $seguimientoService)
-    {
-        $usuario = auth()->user();
-        $request->validate([
-            'fk_ventanilla_destino_id' => 'required|exists:ventanillas,ventanilla_id',
-            'justificativo' => 'required|string|min:5',
-        ]);
-        $ficha = $this->findFichaByIdOrNumero($fichaId);
-        $estadoActual = $ficha->estado_actual;
-        $ultimoEnAtencion = $ficha->seguimientos()->whereHas('dominioEstado', function($q){ $q->where('nombre', 'en_atencion'); })->latest('fecha')->first();
-        if ($estadoActual !== 'en_atencion') {
-            return response()->json(['message' => 'Solo se puede redirigir una ficha que está siendo atendida actualmente.'], 409);
-        }
-        if (!$ultimoEnAtencion || $ultimoEnAtencion->fk_ventanilla_id != $usuario->fk_ventanilla_id) {
-            return response()->json(['message' => 'Solo la ventanilla que está atendiendo la ficha puede realizar la redirección.'], 409);
-        }
-        if (empty($request->justificativo)) {
-            return response()->json(['message' => 'Debes ingresar una justificación para redirigir la ficha.'], 422);
-        }
-        $ventanillaDestino = \App\Models\Ventanilla::with(['sucursal', 'tiposServicio'])->findOrFail($request->fk_ventanilla_destino_id);
-        
-        // Validar ventanilla destino abierta
-        if ($ventanillaDestino->estado === 'cerrada') {
-            return response()->json(['message' => 'No se puede reasignar a una ventanilla cerrada.'], 409);
-        }
-        
-        // VALIDACIÓN DE SEGURIDAD: Solo reasignar a ventanillas de la misma sucursal
-        $ventanillaOrigen = $ficha->seguimientos()->latest('created_at')->first()?->ventanilla;
-        if (!$ventanillaOrigen) {
-            return response()->json(['message' => 'No se puede determinar la ventanilla de origen.'], 409);
-        }
-        
-        if ($ventanillaDestino->fk_sucursal_id !== $ventanillaOrigen->fk_sucursal_id) {
-            return response()->json([
-                'message' => 'No se puede reasignar fichas a ventanillas de otra sucursal.',
-                'ventanilla_origen_sucursal' => $ventanillaOrigen->fk_sucursal_id,
-                'ventanilla_destino_sucursal' => $ventanillaDestino->fk_sucursal_id
-            ], 409);
-        }
-        
-        // VALIDACIÓN DE LÓGICA DE NEGOCIO: La ventanilla destino debe atender el mismo tipo de servicio
-        $tipoServicioFicha = $ficha->fk_tipo_servicio_id;
-        $serviciosVentanillaDestino = $ventanillaDestino->tiposServicio->pluck('dominio_id')->toArray();
-        
-        if (!in_array($tipoServicioFicha, $serviciosVentanillaDestino)) {
-            // Obtener nombres de servicios para mensaje más claro
-            $servicioFicha = \App\Models\Dominio::find($tipoServicioFicha);
-            $nombresServicios = $ventanillaDestino->tiposServicio->pluck('nombre')->toArray();
-            
-            return response()->json([
-                'message' => 'La ventanilla destino no atiende el tipo de servicio de esta ficha.',
-                'servicio_ficha' => $servicioFicha ? $servicioFicha->nombre : 'Desconocido',
-                'servicios_ventanilla_destino' => $nombresServicios,
-                'ventanilla_destino' => $ventanillaDestino->numero
-            ], 409);
-        }
-
-        // INICIO TRANSACCIÓN
         try {
             \DB::beginTransaction();
 
-            // Registrar seguimiento de reasignación
+            // Crear seguimiento para retornar a espera con prioridad (fecha anterior para que sea primera)
+            $dominioEspera = \App\Models\Dominio::where('nombre', 'en_espera')->first();
             $seguimiento = $seguimientoService->crearSeguimiento([
                 'fk_ficha_id' => $ficha->ficha_id,
-                'fk_ventanilla_id' => $ventanillaDestino->ventanilla_id,
-                'fk_usuario_id' => $usuario->usuario_id,
-                'estado' => 'reasignado',
-                'fk_dominio_accion_id' => \App\Models\Dominio::where('nombre', 'reasignado')->first()?->dominio_id,
-                'fecha' => now(),
-                'observacion' => 'Reasignación de ventanilla '.($ventanillaOrigen ? $ventanillaOrigen->numero : 'N/A').
-                    ' a '.$ventanillaDestino->numero.'. Motivo: '.$request->justificativo
-            ]);
-
-            // Cambiar estado de la ficha a 'en_espera' y actualizar ventanilla si corresponde
-            // (Opcional: si la ficha tiene campo fk_ventanilla_id, actualizarlo)
-            // Insertar como primera en la cola: crear seguimiento 'en_espera' con fecha = now() - 1 segundo
-            $dominioEspera = \App\Models\Dominio::where('nombre', 'en_espera')->first();
-            $seguimientoEspera = $seguimientoService->crearSeguimiento([
-                'fk_ficha_id' => $ficha->ficha_id,
-                'fk_ventanilla_id' => $ventanillaDestino->ventanilla_id,
+                'fk_ventanilla_id' => null, // Sin ventanilla específica, disponible para cualquiera que atienda el servicio
                 'fk_usuario_id' => $usuario->usuario_id,
                 'estado' => 'en_espera',
                 'fk_dominio_accion_id' => $dominioEspera?->dominio_id,
-                'fecha' => now()->subSecond(),
-                'observacion' => 'Ficha en espera tras reasignación.'
+                'fecha' => now()->subSeconds(10), // Fecha anterior para que sea primera en la cola
+                'observacion' => 'Ficha retornada a espera. Motivo: ' . $request->justificativo
             ]);
 
             \DB::commit();
         } catch (\Exception $e) {
             \DB::rollBack();
             return response()->json([
-                'message' => 'Ocurrió un error al reasignar la ficha: ' . $e->getMessage()
+                'message' => 'Ocurrió un error al retornar la ficha a espera: ' . $e->getMessage()
             ], 500);
         }
-        // FIN TRANSACCIÓN
+        
         return response()->json([
-            'seguimiento_reasignacion' => $seguimiento,
-            'seguimiento_espera' => $seguimientoEspera,
-            'message' => 'Ficha reasignada correctamente a la ventanilla '.$ventanillaDestino->numero.' y puesta como primera en espera.'
+            'seguimiento' => $seguimiento,
+            'message' => 'Ficha retornada a espera como primera en la cola.'
         ], 201);
     }
 

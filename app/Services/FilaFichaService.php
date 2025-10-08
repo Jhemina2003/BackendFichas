@@ -30,12 +30,8 @@ class FilaFichaService
         $tiposServicioIds = $ventanilla->tiposServicio()->pluck('dominios.dominio_id')->toArray();
         if (empty($tiposServicioIds)) return null;
 
-        // Obtener fichas SOLO de la misma sucursal, filtradas por estado actual calculado
-        // Ordenadas por fecha del último seguimiento "en_espera" para respetar reasignaciones
-        $fichasPreferenciales = Ficha::whereHas('tipoFicha', function($q) {
-                $q->where('nombre', 'preferencial');
-            })
-            ->whereHas('tipoServicio', function($q) use ($tiposServicioIds) {
+        // Obtener todas las fichas en espera de la sucursal y servicios de la ventanilla
+        $fichasEnEspera = Ficha::whereHas('tipoServicio', function($q) use ($tiposServicioIds) {
                 $q->whereIn('dominio_id', $tiposServicioIds);
             })
             ->whereHas('sesion.sucursal', function($q) use ($sucursalId) {
@@ -49,34 +45,35 @@ class FilaFichaService
             ->get()
             ->filter(function($ficha) {
                 return $ficha->estado_actual === 'en_espera';
-            })
-            ->sortBy(function($ficha) {
-                $ultimoEnEspera = $ficha->seguimientos->first();
-                return $ultimoEnEspera ? $ultimoEnEspera->fecha : $ficha->fecha_registro;
             });
 
-        $fichasNormales = Ficha::whereHas('tipoFicha', function($q) {
-                $q->where('nombre', 'normal');
-            })
-            ->whereHas('tipoServicio', function($q) use ($tiposServicioIds) {
-                $q->whereIn('dominio_id', $tiposServicioIds);
-            })
-            ->whereHas('sesion.sucursal', function($q) use ($sucursalId) {
-                $q->where('sucursal_id', $sucursalId);
-            })
-            ->with(['seguimientos' => function($q) {
-                $q->whereHas('dominioEstado', function($subQ) {
-                    $subQ->where('nombre', 'en_espera');
-                })->latest('fecha');
-            }])
-            ->get()
-            ->filter(function($ficha) {
-                return $ficha->estado_actual === 'en_espera';
-            })
-            ->sortBy(function($ficha) {
-                $ultimoEnEspera = $ficha->seguimientos->first();
-                return $ultimoEnEspera ? $ultimoEnEspera->fecha : $ficha->fecha_registro;
-            });
+        // Buscar ficha retornada a espera (fk_ventanilla_id == null en el último seguimiento 'en_espera')
+        $fichaRetornada = $fichasEnEspera->filter(function($ficha) {
+            $ultimoEnEspera = $ficha->seguimientos->first();
+            return $ultimoEnEspera && $ultimoEnEspera->fk_ventanilla_id === null;
+        })->sortBy(function($ficha) {
+            $ultimoEnEspera = $ficha->seguimientos->first();
+            return $ultimoEnEspera ? strtotime($ultimoEnEspera->fecha) : strtotime($ficha->fecha_registro);
+        })->first();
+
+        if ($fichaRetornada) {
+            // Si hay ficha retornada, siempre es la primera en la cola
+            return $fichaRetornada;
+        }
+
+        // Si no hay ficha retornada, seguir con la lógica de alternancia preferencial/normal
+        $fichasPreferenciales = $fichasEnEspera->filter(function($ficha) {
+            return $ficha->tipoFicha && $ficha->tipoFicha->nombre === 'preferencial';
+        })->sortBy(function($ficha) {
+            $ultimoEnEspera = $ficha->seguimientos->first();
+            return $ultimoEnEspera ? strtotime($ultimoEnEspera->fecha) : strtotime($ficha->fecha_registro);
+        });
+        $fichasNormales = $fichasEnEspera->filter(function($ficha) {
+            return $ficha->tipoFicha && $ficha->tipoFicha->nombre === 'normal';
+        })->sortBy(function($ficha) {
+            $ultimoEnEspera = $ficha->seguimientos->first();
+            return $ultimoEnEspera ? strtotime($ultimoEnEspera->fecha) : strtotime($ficha->fecha_registro);
+        });
 
         $fichaPreferencial = $fichasPreferenciales->first();
         $fichaNormal = $fichasNormales->first();

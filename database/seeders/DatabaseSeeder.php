@@ -49,7 +49,6 @@ class DatabaseSeeder extends Seeder
         $seguimientoEnAtencion = Dominio::firstOrCreate(['nombre' => 'en_atencion', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
         $seguimientoFinalizado = Dominio::firstOrCreate(['nombre' => 'finalizado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
         $seguimientoAusente = Dominio::firstOrCreate(['nombre' => 'ausente', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
-        $seguimientoReasignado = Dominio::firstOrCreate(['nombre' => 'reasignado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
 
         // Organización principal
         $org = Organizacion::firstOrCreate(['nombre' => 'Unidad Apostilla y Legalizaciones']);
