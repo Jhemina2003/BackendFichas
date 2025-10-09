@@ -38,6 +38,9 @@ class LlamadaController extends Controller
                 'ventanilla_id' => $ventanillaId
             ]);
             
+            // LÓGICA DE CIERRE FORZADO: Antes de llamar ficha, finalizar fichas incompletas del día anterior
+            $this->forzarFinalizacionFichasAnteriores($usuario);
+            
             // Validar que la ventanilla tenga una sesión activa
             $sesionActiva = \App\Models\SesionVentanilla::where('fk_ventanilla_id', $ventanillaId)
                 ->where('fk_usuario_id', $usuario->usuario_id)
@@ -174,5 +177,57 @@ class LlamadaController extends Controller
     {
         Llamada::destroy($id);
         return response()->json(null, 204);
+    }
+
+    /**
+     * Finalizar automáticamente fichas incompletas del día anterior para esta ventanilla
+     */
+    private function forzarFinalizacionFichasAnteriores($usuario): void
+    {
+        $hoy = now()->toDateString();
+        
+        // Buscar fichas activas de días anteriores para esta ventanilla
+        $fichasAnteriores = \App\Models\Ficha::whereHas('seguimientos', function($q) use ($usuario) {
+                $q->where('fk_ventanilla_id', $usuario->fk_ventanilla_id);
+            })
+            ->whereHas('sesion', function($q) use ($hoy) {
+                $q->whereDate('fecha', '<', $hoy);
+            })
+            ->get()
+            ->filter(function($ficha) {
+                return in_array($ficha->estado_actual, ['en_espera', 'llamado', 'en_atencion']);
+            });
+        
+        if ($fichasAnteriores->count() > 0) {
+            $dominioFinalizado = \App\Models\Dominio::where('nombre', 'finalizado')->first();
+            
+            foreach ($fichasAnteriores as $fichaAnterior) {
+                $estadoActual = $fichaAnterior->estado_actual;
+                $mensajeObservacion = '';
+                
+                switch ($estadoActual) {
+                    case 'en_espera':
+                        $mensajeObservacion = 'Ficha finalizada automáticamente - quedó en espera sin ser llamada el día anterior.';
+                        break;
+                    case 'llamado':
+                        $mensajeObservacion = 'Ficha finalizada automáticamente - fue llamada pero el usuario no se presentó el día anterior.';
+                        break;
+                    case 'en_atencion':
+                        $mensajeObservacion = 'Ficha finalizada automáticamente - estaba en atención pero no se completó el día anterior.';
+                        break;
+                }
+                
+                // Crear seguimiento de finalización forzada
+                \App\Models\Seguimiento::create([
+                    'fk_ficha_id' => $fichaAnterior->ficha_id,
+                    'fk_ventanilla_id' => $usuario->fk_ventanilla_id,
+                    'fk_usuario_id' => null, // Sin usuario específico (cierre automático)
+                    'fk_dominio_estado_id' => $dominioFinalizado ? $dominioFinalizado->dominio_id : null,
+                    'fk_dominio_accion_id' => $dominioFinalizado ? $dominioFinalizado->dominio_id : null,
+                    'fecha' => now(),
+                    'observacion' => $mensajeObservacion
+                ]);
+            }
+        }
     }
 }
