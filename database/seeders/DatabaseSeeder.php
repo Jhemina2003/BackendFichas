@@ -50,43 +50,16 @@ class DatabaseSeeder extends Seeder
         $seguimientoFinalizado = Dominio::firstOrCreate(['nombre' => 'finalizado', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
         $seguimientoAusente = Dominio::firstOrCreate(['nombre' => 'ausente', 'fk_dominio_grupo_id' => $estadoSeguimientoGrupo->dominio_grupo_id]);
 
-        // Organización principal
-        $org = Organizacion::firstOrCreate(['nombre' => 'Unidad Apostilla y Legalizaciones']);
+        // Eliminar todas las ventanillas, sucursales y organizaciones
+        \App\Models\Ventanilla::truncate();
+        \App\Models\Sucursal::truncate();
+        \App\Models\Organizacion::truncate();
 
-        // Sucursal Santa Cruz
-        $sucursal = Sucursal::firstOrCreate(['fk_organizacion_id' => $org->organizacion_id, 'nombre' => 'Santa Cruz']);
-
-        // Crear 10 ventanillas (inicialmente cerradas)
-        $ventanillas = [];
-        for ($i = 1; $i <= 10; $i++) {
-            $ventanillas[$i] = Ventanilla::firstOrCreate([
-                'fk_sucursal_id' => $sucursal->sucursal_id,
-                'numero' => $i,
-                'estado' => \App\Enums\EstadoVentanillaEnum::CERRADA->value
-            ]);
-        }
-
-        // Crear 10 usuarios ventanilla con contraseña genérica 'ventanillaX123'
-        for ($i = 1; $i <= 10; $i++) {
-            Usuario::updateOrCreate(
-                ['usuario' => 'ventanilla' . $i],
-                [
-                    'fk_sucursal_id' => $sucursal->sucursal_id,
-                    'nombre_completo' => 'Ventanilla ' . $i,
-                    'correo_electronico' => 'ventanilla' . $i . '@ejemplo.com',
-                    'password' => bcrypt('ventanilla' . $i . '123'),
-                    'activo' => true,
-                    'fk_persona_id' => 100 + $i,
-                    'fk_ventanilla_id' => $ventanillas[$i]->ventanilla_id
-                ]
-            );
-        }
-
-        // Usuario extra 'fichas' (sin ventanilla asignada, contraseña: fichas123)
+        // Mantener solo los usuarios de fichas
+        \App\Models\Usuario::where('usuario', '!=', 'fichas')->where('usuario', '!=', 'fichaslapaz')->delete();
         Usuario::updateOrCreate(
             ['usuario' => 'fichas'],
             [
-                'fk_sucursal_id' => $sucursal->sucursal_id, // Santa Cruz
                 'nombre_completo' => 'Usuario Fichas',
                 'correo_electronico' => 'fichas@ejemplo.com',
                 'password' => bcrypt('fichas123'),
@@ -95,41 +68,9 @@ class DatabaseSeeder extends Seeder
                 'fk_ventanilla_id' => null
             ]
         );
-
-        // Sucursal La Paz
-        $sucursalLaPaz = Sucursal::firstOrCreate(['fk_organizacion_id' => $org->organizacion_id, 'nombre' => 'La Paz']);
-
-        // Crear 5 ventanillas para La Paz (inicialmente cerradas)
-        $ventanillasLaPaz = [];
-        for ($i = 1; $i <= 5; $i++) {
-            $ventanillasLaPaz[$i] = Ventanilla::firstOrCreate([
-                'fk_sucursal_id' => $sucursalLaPaz->sucursal_id,
-                'numero' => $i,
-                'estado' => \App\Enums\EstadoVentanillaEnum::CERRADA->value
-            ]);
-        }
-
-        // Crear 5 usuarios ventanilla para La Paz con contraseña genérica 'lapazX123'
-        for ($i = 1; $i <= 5; $i++) {
-            Usuario::updateOrCreate(
-                ['usuario' => 'lapaz' . $i],
-                [
-                    'fk_sucursal_id' => $sucursalLaPaz->sucursal_id,
-                    'nombre_completo' => 'Ventanilla La Paz ' . $i,
-                    'correo_electronico' => 'lapaz' . $i . '@ejemplo.com',
-                    'password' => bcrypt('lapaz' . $i . '123'),
-                    'activo' => true,
-                    'fk_persona_id' => 200 + $i,
-                    'fk_ventanilla_id' => $ventanillasLaPaz[$i]->ventanilla_id
-                ]
-            );
-        }
-
-        // Usuario extra 'fichaslapaz' para La Paz (sin ventanilla asignada, contraseña: fichaslapaz123)
         Usuario::updateOrCreate(
             ['usuario' => 'fichaslapaz'],
             [
-                'fk_sucursal_id' => $sucursalLaPaz->sucursal_id, // La Paz
                 'nombre_completo' => 'Usuario Fichas La Paz',
                 'correo_electronico' => 'fichaslapaz@ejemplo.com',
                 'password' => bcrypt('fichaslapaz123'),
@@ -139,7 +80,12 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Asignar servicios a ventanillas según la lógica definida
-        $this->call(\Database\Seeders\VentanillaTipoServicioSeeder::class);
+        // Crear roles Administrador y Ventanilla
+        \App\Models\Rol::firstOrCreate(['nombre' => 'Administrador']);
+        \App\Models\Rol::firstOrCreate(['nombre' => 'Ventanilla']);
+
+        // Los usuarios deben ser asignados a roles manualmente por base de datos
+
+        // No crear ventanillas, sucursales ni organizaciones por seed
     }
 }

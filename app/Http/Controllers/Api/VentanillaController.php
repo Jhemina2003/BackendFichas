@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Ventanilla;
 use App\Services\VentanillaService;
 
+use App\Models\Usuario;
+
 class VentanillaController extends Controller
 {
     /**
@@ -43,9 +45,30 @@ class VentanillaController extends Controller
         return $query->get();
     }
     public function show($id) { return Ventanilla::findOrFail($id); }
+
     public function store(\App\Http\Requests\StoreVentanillaRequest $request, VentanillaService $ventanillaService) {
         $ventanilla = $ventanillaService->crearVentanilla($request->validated());
         return response()->json($ventanilla, 201);
+    }
+
+    /**
+     * Asigna un usuario a una ventanilla, validando organización y unicidad.
+     * POST /api/ventanillas/{ventanilla_id}/asignar-usuario
+     * Body: { "usuario_id": int }
+     */
+    public function asignarUsuario(Request $request, $ventanilla_id, VentanillaService $ventanillaService)
+    {
+        $request->validate([
+            'usuario_id' => 'required|exists:usuarios,usuario_id',
+        ]);
+        $ventanilla = Ventanilla::findOrFail($ventanilla_id);
+        $usuario = Usuario::findOrFail($request->usuario_id);
+        try {
+            $ventanillaService->asignarUsuario($ventanilla, $usuario);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+        return response()->json(['message' => 'Usuario asignado correctamente a la ventanilla.']);
     }
 
     /**

@@ -14,7 +14,7 @@ class StoreOrganizacionRequest extends FormRequest
     public function rules()
     {
         return [
-            'nombre' => 'required|string|max:255',
+            'fk_cod_contacto' => 'required|string|max:255',
         ];
     }
 }

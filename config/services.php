@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'rrhh' => [
+        'base_url' => env('RRHH_BASE_URL', 'https://servicios.rree.gob.bo'),
+        'api_key' => env('RRHH_API_KEY'),
+        'aplicacion' => env('RRHH_APLICACION', 'Sistema Fichas'),
+        'timeout' => env('RRHH_TIMEOUT', 10),
+        'cache_ttl' => env('RRHH_CACHE_TTL', 3600),
+    ],
+
 ];

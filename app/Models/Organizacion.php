@@ -12,5 +12,10 @@ class Organizacion extends Model
     protected $table = 'organizaciones';
     protected $primaryKey = 'organizacion_id';
     protected $guarded = [];
+    protected $fillable = [
+        'nombre',
+        'fk_cod_contacto',
+        // ...existing fillable fields...
+    ];
     public $timestamps = true;
 }

@@ -12,6 +12,10 @@ class Sucursal extends Model
     protected $table = 'sucursales';
     protected $primaryKey = 'sucursal_id';
     protected $guarded = [];
+    protected $fillable = [
+        'fk_organizacion_id',
+        'nombre',
+    ];
     public $timestamps = true;
 
     public function organizacion()

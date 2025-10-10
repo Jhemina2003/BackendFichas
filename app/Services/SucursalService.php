@@ -8,7 +8,14 @@ class SucursalService
 {
     public function crearSucursal(array $data): Sucursal
     {
-        return Sucursal::create($data);
+        // Evitar duplicados por nombre y organización
+        $existe = \App\Models\Sucursal::where('fk_organizacion_id', $data['fk_organizacion_id'])
+            ->where('nombre', $data['nombre'])
+            ->first();
+        if ($existe) {
+            return $existe;
+        }
+        return \App\Models\Sucursal::create($data);
     }
 
     public function actualizarSucursal(Sucursal $sucursal, array $data): Sucursal

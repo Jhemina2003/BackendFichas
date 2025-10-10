@@ -15,7 +15,7 @@ class StoreSucursalRequest extends FormRequest
     {
         return [
             'fk_organizacion_id' => 'required|exists:organizaciones,organizacion_id',
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|max:255|unique:sucursales,nombre,NULL,id,fk_organizacion_id,' . $this->fk_organizacion_id,
         ];
     }
 }

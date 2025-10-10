@@ -15,6 +15,7 @@ class UpdateOrganizacionRequest extends FormRequest
     {
         return [
             'nombre' => 'sometimes|string|max:255',
+            'fk_cod_contacto' => 'nullable|string|max:255',
         ];
     }
 }

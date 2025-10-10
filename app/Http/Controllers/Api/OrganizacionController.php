@@ -24,8 +24,16 @@ class OrganizacionController extends Controller
     }
     public function show($id) { return Organizacion::findOrFail($id); }
     public function store(\App\Http\Requests\StoreOrganizacionRequest $request) {
-        $organizacion = $this->organizacionService->crearOrganizacion($request->validated());
-        return response()->json($organizacion, 201);
+        try {
+            $organizacion = $this->organizacionService->crearOrganizacion($request->validated());
+            // Si ya existe, retorna error 409
+            if ($organizacion->wasRecentlyCreated === false) {
+                return response()->json(['error' => 'La organización ya existe en el sistema.'], 409);
+            }
+            return response()->json($organizacion, 201);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
     }
     public function update(\App\Http\Requests\UpdateOrganizacionRequest $request, $id) {
         $organizacion = Organizacion::findOrFail($id);
