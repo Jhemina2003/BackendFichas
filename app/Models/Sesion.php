@@ -23,4 +23,10 @@ class Sesion extends Model
         // Relación a través de sucursal
         return $this->sucursal ? $this->sucursal->organizacion() : null;
     }
+
+    // Relación con dominio de estado (corregido: debe apuntar a fk_dominio_estado_id)
+    public function estadoDominio()
+    {
+        return $this->belongsTo(\App\Models\Dominio::class, 'fk_dominio_estado_id', 'dominio_id');
+    }
 }

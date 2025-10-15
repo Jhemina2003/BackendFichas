@@ -32,4 +32,10 @@ class Ventanilla extends Model
             'dominio_id'
         );
     }
+
+    // Relación con usuario asignado a la ventanilla
+    public function usuario()
+    {
+        return $this->hasOne(\App\Models\Usuario::class, 'fk_ventanilla_id', 'ventanilla_id');
+    }
 }

@@ -55,34 +55,13 @@ class DatabaseSeeder extends Seeder
         \App\Models\Sucursal::truncate();
         \App\Models\Organizacion::truncate();
 
-        // Mantener solo los usuarios de fichas
-        \App\Models\Usuario::where('usuario', '!=', 'fichas')->where('usuario', '!=', 'fichaslapaz')->delete();
-        Usuario::updateOrCreate(
-            ['usuario' => 'fichas'],
-            [
-                'nombre_completo' => 'Usuario Fichas',
-                'correo_electronico' => 'fichas@ejemplo.com',
-                'password' => bcrypt('fichas123'),
-                'activo' => true,
-                'fk_persona_id' => 999,
-                'fk_ventanilla_id' => null
-            ]
-        );
-        Usuario::updateOrCreate(
-            ['usuario' => 'fichaslapaz'],
-            [
-                'nombre_completo' => 'Usuario Fichas La Paz',
-                'correo_electronico' => 'fichaslapaz@ejemplo.com',
-                'password' => bcrypt('fichaslapaz123'),
-                'activo' => true,
-                'fk_persona_id' => 299,
-                'fk_ventanilla_id' => null
-            ]
-        );
+        // Eliminar todos los usuarios de prueba
+        \App\Models\Usuario::truncate();
 
-        // Crear roles Administrador y Ventanilla
+        // Crear roles del sistema
         \App\Models\Rol::firstOrCreate(['nombre' => 'Administrador']);
         \App\Models\Rol::firstOrCreate(['nombre' => 'Ventanilla']);
+        \App\Models\Rol::firstOrCreate(['nombre' => 'Fichas']);
 
         // Los usuarios deben ser asignados a roles manualmente por base de datos
 

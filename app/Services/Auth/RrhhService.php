@@ -39,11 +39,17 @@ class RrhhService
 
             if ($response->successful()) {
                 $tokenData = $response->json();
+                Log::info('Respuesta RRHH autenticación', [
+                    'usuario' => $credentials['usuario'],
+                    'tokenData' => $tokenData
+                ]);
+                
                 // Si el login es exitoso, obtener datos completos del usuario
                 if (isset($tokenData['token']) || isset($tokenData['access_token'])) {
                     $userData = $this->getUserDetails($credentials['usuario'], $tokenData);
                     Log::info('Autenticación RRHH exitosa', [
-                        'usuario' => $credentials['usuario']
+                        'usuario' => $credentials['usuario'],
+                        'userData' => $userData
                     ]);
                     // Adjuntar el token externo al array de usuario
                     if (isset($tokenData['token'])) {
@@ -72,86 +78,178 @@ class RrhhService
     }
 
     /**
-     * Obtener detalles del usuario desde RRHH
+     * Obtener detalles del usuario desde RRHH usando el endpoint correcto
      */
     public function getUserDetails(string $usuario, array $tokenData): array
     {
         try {
-            // Buscar usuario por nombre
+            // Decodificar JWT para obtener nombre completo si existe
+            $jwtPayload = null;
+            $nombreCompleto = $usuario;
+            $organizacionId = null;
+            $organizacionNombre = null;
+            if (isset($tokenData['token'])) {
+                $jwtPayload = $this->decodeJWT($tokenData['token']);
+                if ($jwtPayload) {
+                    $nombreCompleto = $jwtPayload['NombreCompleto'] ?? $usuario;
+                    $organizacionId = $jwtPayload['UniOrganizacionalID'] ?? null;
+                    $organizacionNombre = $jwtPayload['UniOrganizacional'] ?? null;
+                }
+            }
+
+            // 1. Buscar coincidencia exacta por usuario
             $searchResponse = Http::withHeaders([
-                'RREE-ApiKey' => $this->apiKey,
-                'RREE-Aplicacion' => $this->aplicacion
+                'RREE-ApiKey' => '5d2a42fdad5a4159ad4cea5491f95471fddfbf30',
+                'RREE-Aplicacion' => 'Soporte'
             ])->withOptions(['verify' => false])
-            ->post($this->baseUrl . '/rrhh-interop/api/V2/Personas/buscar', [
+            ->post('https://servicios.rree.gob.bo/rrhh-interop/api/V2/Personas/buscar', [
                 'nombre' => $usuario
             ]);
 
+            $personaId = null;
+            $personaData = null;
+
             if ($searchResponse->successful()) {
                 $searchData = $searchResponse->json();
-                
                 if (isset($searchData['data']) && count($searchData['data']) > 0) {
-                    $persona = $searchData['data'][0]; // Tomar el primer resultado
-                    
-                    // Obtener detalles completos si tenemos el ID
-                    if (isset($persona['id'])) {
-                        $detailResponse = Http::withHeaders([
-                            'Rree-Apikey' => $this->apiKey,
-                            'Rree-Aplicacion' => $this->aplicacion
-                        ])->withOptions(['verify' => false])
-                        ->get($this->baseUrl . '/rrhh-interop/api/v2/personas/autenticacion/' . $persona['id']);
-                        
-                        if ($detailResponse->successful()) {
-                            $detailData = $detailResponse->json();
-                            
-                            return [
-                                'id' => $persona['id'],
+                    foreach ($searchData['data'] as $persona) {
+                        if (isset($persona['usuario']) && strtolower($persona['usuario']) === strtolower($usuario)) {
+                            $personaId = $persona['id'];
+                            $personaData = $persona;
+                            Log::info('Persona encontrada en RRHH por coincidencia exacta de usuario', [
                                 'usuario' => $usuario,
-                                'nombre_completo' => $detailData['nombreCompleto'] ?? $persona['nombreCompleto'] ?? $usuario,
-                                'correo_electronico' => $detailData['correoElectronico'] ?? $persona['correoElectronico'] ?? $usuario . '@rree.gob.bo',
-                                'fk_persona_id' => $persona['id'],
-                                'organizacion_id' => $detailData['unidadOrganizacional']['id'] ?? null,
-                                'organizacion_nombre' => $detailData['unidadOrganizacional']['nombre'] ?? null,
-                                'cargo' => $detailData['cargo'] ?? null,
-                                'activo' => $detailData['estado'] ?? true
-                            ];
+                                'persona_id' => $personaId,
+                                'nombre' => $personaData['nombreCompleto'] ?? ''
+                            ]);
+                            break;
                         }
                     }
-                    
-                    // Si no se pueden obtener detalles, usar datos básicos
-                    return [
-                        'id' => $persona['id'] ?? null,
-                        'usuario' => $usuario,
-                        'nombre_completo' => $persona['nombreCompleto'] ?? $usuario,
-                        'correo_electronico' => $persona['correoElectronico'] ?? $usuario . '@rree.gob.bo',
-                        'fk_persona_id' => $persona['id'] ?? null,
-                        'organizacion_id' => null,
-                        'organizacion_nombre' => null,
-                        'cargo' => null,
-                        'activo' => true
-                    ];
                 }
             }
-            
-            // Si no se encuentra información detallada, crear datos básicos
-            return [
-                'id' => null,
-                'usuario' => $usuario,
-                'nombre_completo' => $usuario,
-                'correo_electronico' => $usuario . '@rree.gob.bo',
-                'fk_persona_id' => null,
-                'organizacion_id' => null,
-                'organizacion_nombre' => null,
-                'cargo' => null,
-                'activo' => true
-            ];
-            
+
+            // 2. Si no hay coincidencia exacta, buscar por nombre completo en todas las organizaciones
+            if (!$personaId) {
+                Log::info('No se encontró coincidencia exacta, buscando por nombre en todas las organizaciones', [
+                    'usuario' => $usuario,
+                    'nombreCompleto' => $nombreCompleto
+                ]);
+                $organizaciones = $this->listarOrganizaciones();
+                if ($organizaciones && isset($organizaciones['data'])) {
+                    foreach ($organizaciones['data'] as $org) {
+                        $orgId = $org['id'] ?? null;
+                        if ($orgId) {
+                            $usuariosOrg = $this->getUsuariosPorOrganizacion($orgId);
+                            if ($usuariosOrg && isset($usuariosOrg['data'])) {
+                                foreach ($usuariosOrg['data'] as $persona) {
+                                    // Comparar nombre completo ignorando tildes, mayúsculas y espacios extras
+                                    $nombrePersona = strtolower(trim(preg_replace('/\s+/', ' ', iconv('UTF-8', 'ASCII//TRANSLIT', $persona['nombreCompleto'] ?? ''))));
+                                    $nombreBuscado = strtolower(trim(preg_replace('/\s+/', ' ', iconv('UTF-8', 'ASCII//TRANSLIT', $nombreCompleto))));
+                                    Log::debug('Comparando nombres RRHH', [
+                                        'usuario' => $usuario,
+                                        'nombrePersona' => $nombrePersona,
+                                        'nombreBuscado' => $nombreBuscado,
+                                        'persona_id' => $persona['id'] ?? null,
+                                        'organizacion_id' => $orgId
+                                    ]);
+                                    if ($nombrePersona === $nombreBuscado || strpos($nombrePersona, $nombreBuscado) !== false || strpos($nombreBuscado, $nombrePersona) !== false) {
+                                        $personaId = $persona['id'] ?? null;
+                                        $personaData = $persona;
+                                        Log::info('Persona encontrada en RRHH por nombre en organización', [
+                                            'usuario' => $usuario,
+                                            'persona_id' => $personaId,
+                                            'organizacion_id' => $orgId,
+                                            'nombre' => $personaData['nombreCompleto'] ?? ''
+                                        ]);
+                                        break 2;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Si se encontró el nombre pero no el id, buscar en el endpoint local /api/rrhh/personas
+            if (!$personaId && !empty($nombreCompleto)) {
+                try {
+                    $localResponse = Http::timeout(5)->get('http://127.0.0.1:8000/api/rrhh/personas');
+                    if ($localResponse->successful()) {
+                        $personasLocal = $localResponse->json();
+                        foreach ($personasLocal as $personaLocal) {
+                            // El endpoint local usa 'nombre' en lugar de 'nombreCompleto'
+                            $nombreLocal = strtolower(trim(preg_replace('/\s+/', ' ', iconv('UTF-8', 'ASCII//TRANSLIT', $personaLocal['nombre'] ?? ''))));
+                            $nombreBuscado = strtolower(trim(preg_replace('/\s+/', ' ', iconv('UTF-8', 'ASCII//TRANSLIT', $nombreCompleto))));
+                            Log::debug('Comparando nombres endpoint local', [
+                                'usuario' => $usuario,
+                                'nombreLocal' => $nombreLocal,
+                                'nombreBuscado' => $nombreBuscado,
+                                'persona_id' => $personaLocal['id']
+                            ]);
+                            if ($nombreLocal === $nombreBuscado || strpos($nombreLocal, $nombreBuscado) !== false || strpos($nombreBuscado, $nombreLocal) !== false) {
+                                $personaId = $personaLocal['id'];
+                                $personaData = ['nombreCompleto' => $personaLocal['nombre']]; // Mapear correctamente
+                                Log::info('Persona encontrada en endpoint local /api/rrhh/personas', [
+                                    'usuario' => $usuario,
+                                    'persona_id' => $personaId,
+                                    'nombre' => $personaLocal['nombre']
+                                ]);
+                                break;
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error consultando endpoint local /api/rrhh/personas', [
+                        'usuario' => $usuario,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }            // 3. Si sigue sin encontrarse, buscar por correo electrónico
+            if (!$personaId && isset($personaData['correoElectronico'])) {
+                $correoBuscado = strtolower($usuario . '@rree.gob.bo');
+                if (strtolower($personaData['correoElectronico']) === $correoBuscado) {
+                    $personaId = $personaData['id'];
+                    Log::info('Persona encontrada en RRHH por correo electrónico', [
+                        'usuario' => $usuario,
+                        'persona_id' => $personaId,
+                        'correo' => $personaData['correoElectronico']
+                    ]);
+                }
+            }
+
+            // 4. Retornar datos completos si se encontró persona
+            if ($personaId) {
+                return [
+                    'id' => $personaId,
+                    'usuario' => $usuario,
+                    'nombre_completo' => $personaData['nombreCompleto'] ?? $nombreCompleto,
+                    'correo_electronico' => $personaData['correoElectronico'] ?? $usuario . '@rree.gob.bo',
+                    'fk_persona_id' => $personaId,
+                    'organizacion_id' => $organizacionId,
+                    'organizacion_nombre' => $organizacionNombre,
+                    'cargo' => $personaData['cargo'] ?? null,
+                    'activo' => true
+                ];
+            } else {
+                Log::warning('No se encontró coincidencia en RRHH tras búsqueda avanzada, se crea sin fk_persona_id', [
+                    'usuario' => $usuario,
+                    'nombreCompleto' => $nombreCompleto
+                ]);
+                return [
+                    'id' => null,
+                    'usuario' => $usuario,
+                    'nombre_completo' => $nombreCompleto,
+                    'correo_electronico' => $usuario . '@rree.gob.bo',
+                    'fk_persona_id' => null,
+                    'organizacion_id' => $organizacionId,
+                    'organizacion_nombre' => $organizacionNombre,
+                    'cargo' => null,
+                    'activo' => true
+                ];
+            }
         } catch (\Exception $e) {
             Log::error('Error obteniendo detalles de usuario RRHH', [
                 'usuario' => $usuario,
                 'error' => $e->getMessage()
             ]);
-            
-            // Retornar datos mínimos en caso de error
             return [
                 'id' => null,
                 'usuario' => $usuario,
@@ -163,6 +261,25 @@ class RrhhService
                 'cargo' => null,
                 'activo' => true
             ];
+        }
+    }
+
+    /**
+     * Decodificar JWT sin verificar la firma (solo extraer payload)
+     */
+    private function decodeJWT(string $jwt): ?array
+    {
+        try {
+            $parts = explode('.', $jwt);
+            if (count($parts) !== 3) {
+                return null;
+            }
+            
+            $payload = base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1]));
+            return json_decode($payload, true);
+        } catch (\Exception $e) {
+            Log::error('Error decodificando JWT', ['error' => $e->getMessage()]);
+            return null;
         }
     }
 

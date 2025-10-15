@@ -88,25 +88,36 @@ class OrganizacionRrhhController extends Controller
      */
     public function personasPorOrganizacion($id)
     {
-        $personas = $this->rrhhService->getUsuariosPorOrganizacion($id);
-        
-        $lista = [];
-        if (isset($personas['lista']) && is_array($personas['lista'])) {
-            foreach ($personas['lista'] as $persona) {
-                $lista[] = [
-                    'id' => $persona['id'] ?? null,
-                    'nombre' => $persona['nombreCompleto'] ?? null
-                ];
+        try {
+            $personas = $this->rrhhService->getUsuariosPorOrganizacion($id);
+            $lista = [];
+            if (isset($personas['lista']) && is_array($personas['lista'])) {
+                foreach ($personas['lista'] as $persona) {
+                    $lista[] = [
+                        'id' => $persona['id'] ?? null,
+                        'nombre' => $persona['nombreCompleto'] ?? null
+                    ];
+                }
+            } elseif (isset($personas['data']) && is_array($personas['data'])) {
+                foreach ($personas['data'] as $persona) {
+                    $lista[] = [
+                        'id' => $persona['id'] ?? null,
+                        'nombre' => $persona['nombreCompleto'] ?? null
+                    ];
+                }
             }
-        } elseif (isset($personas['data']) && is_array($personas['data'])) {
-            foreach ($personas['data'] as $persona) {
-                $lista[] = [
-                    'id' => $persona['id'] ?? null,
-                    'nombre' => $persona['nombreCompleto'] ?? null
-                ];
-            }
+            return response()->json($lista);
+        } catch (\Exception $e) {
+            \Log::error('Error en personasPorOrganizacion', [
+                'organizacion_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'error' => 'Error interno al consultar personas por organización',
+                'message' => $e->getMessage()
+            ], 500);
         }
-        return response()->json($lista);
     }
 
     /**

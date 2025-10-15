@@ -88,8 +88,27 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         try {
-            $usuario = $request->user()->load(['sucursal', 'ventanilla']);
-            
+            Log::info('Endpoint /me llamado', [
+                'user_id' => $request->user()?->usuario_id,
+                'token_exists' => $request->bearerToken() ? 'Sí' : 'No'
+            ]);
+
+            $usuario = $request->user();
+            if (!$usuario) {
+                Log::warning('Token inválido o usuario no autenticado en /me');
+                return response()->json([
+                    'message' => 'No autorizado'
+                ], 401);
+            }
+
+            $usuario->load(['sucursal', 'ventanilla', 'roles']);
+
+            Log::info('Usuario obtenido exitosamente en /me', [
+                'usuario_id' => $usuario->usuario_id,
+                'usuario' => $usuario->usuario,
+                'roles' => $usuario->roles->pluck('nombre')
+            ]);
+
             return response()->json([
                 'message' => 'Usuario obtenido exitosamente',
                 'data' => [

@@ -110,6 +110,8 @@ class LlamadaController extends Controller
                 
                 \DB::commit();
                 
+                // Emitir evento de ficha actual por socket
+                \App\Helpers\SocketHelper::emitirFichaActual($ventanillaId, $ficha->toArray());
                 return response()->json([
                     'llamada' => $llamada,
                     'ficha' => $ficha

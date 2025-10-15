@@ -18,7 +18,7 @@ return new class extends Migration
             $table->id('usuario_id');
             // $table->integer('fk_dominio_tipo_servicio_id')->index(); // Eliminado, ya no se usa
             $table->integer('fk_sucursal_id')->index();
-            $table->integer('fk_persona_id'); // atributo normal, sin foreign key
+            $table->integer('fk_persona_id')->nullable(); // ahora permite null si no se encuentra en RRHH
             $table->integer('fk_ventanilla_id')->nullable()->index();
             $table->foreign('fk_ventanilla_id')->references('ventanilla_id')->on('ventanillas');
             $table->foreign('fk_sucursal_id')->references('sucursal_id')->on('sucursales');

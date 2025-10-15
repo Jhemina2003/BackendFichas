@@ -71,7 +71,9 @@ class SeguimientoController extends Controller
             'fecha' => now(),
             'observacion' => $request->observacion
         ]);
-        return response()->json($seguimiento, 201);
+    // Emitir evento de ficha actual por socket (ficha finalizada, null)
+    \App\Helpers\SocketHelper::emitirFichaActual($usuario->fk_ventanilla_id, null);
+    return response()->json($seguimiento, 201);
     }
 
     // Retornar ficha a espera con justificativo
@@ -115,6 +117,8 @@ class SeguimientoController extends Controller
             ], 500);
         }
         
+        // Emitir evento de ficha actual por socket (ficha retornada, null)
+        \App\Helpers\SocketHelper::emitirFichaActual($usuario->fk_ventanilla_id, null);
         return response()->json([
             'seguimiento' => $seguimiento,
             'message' => 'Ficha retornada a espera como primera en la cola.'
@@ -203,7 +207,9 @@ class SeguimientoController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
-        return response()->json($seguimiento, 201);
+    // Emitir evento de ficha actual por socket (ficha ausente, null)
+    \App\Helpers\SocketHelper::emitirFichaActual($usuario->fk_ventanilla_id, null);
+    return response()->json($seguimiento, 201);
     }
     // Marcar ficha como en_atencion
     public function marcarEnAtencion(Request $request, SeguimientoService $seguimientoService)
@@ -266,7 +272,9 @@ class SeguimientoController extends Controller
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
-        return response()->json($seguimiento, 201);
+    // Emitir evento de ficha actual por socket (ficha finalizada, null)
+    \App\Helpers\SocketHelper::emitirFichaActual($usuario->fk_ventanilla_id, null);
+    return response()->json($seguimiento, 201);
     }
 
     public function index(Request $request) {

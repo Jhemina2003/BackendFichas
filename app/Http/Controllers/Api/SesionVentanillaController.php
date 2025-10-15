@@ -11,18 +11,32 @@ class SesionVentanillaController extends Controller
     public function iniciar(Request $request, SesionVentanillaService $service)
     {
         $usuario = auth()->user();
+        \Log::info('Intentando iniciar sesión ventanilla', ['usuario' => $usuario ? $usuario->usuario_id : null]);
+        
         if (!$usuario || !$usuario->fk_ventanilla_id) {
+            \Log::warning('Usuario no autenticado o sin ventanilla asignada', [
+                'usuario_id' => $usuario ? $usuario->usuario_id : null,
+                'fk_ventanilla_id' => $usuario ? $usuario->fk_ventanilla_id : null
+            ]);
             return response()->json(['message' => 'Usuario no autenticado o sin ventanilla asignada'], 403);
         }
         
         try {
+            \Log::info('Iniciando sesión ventanilla', [
+                'usuario_id' => $usuario->usuario_id,
+                'ventanilla_id' => $usuario->fk_ventanilla_id
+            ]);
+            
             $sesion = $service->iniciarSesionVentanilla(
                 null, // fk_sesion_id se busca/crea automáticamente
                 $usuario->usuario_id,
                 $usuario->fk_ventanilla_id
             );
+            
+            \Log::info('Sesión ventanilla iniciada exitosamente', ['sesion' => $sesion]);
             return response()->json($sesion, 201);
         } catch (\Exception $e) {
+            \Log::error('Error al iniciar sesión ventanilla', ['error' => $e->getMessage()]);
             return response()->json(['message' => $e->getMessage()], 409);
         }
     }

@@ -45,14 +45,24 @@ class SignInService
         try {
             DB::beginTransaction();
 
+            Log::info('Iniciando autenticación', ['usuario' => $credentials['usuario']]);
+
             // No crear organización automáticamente al autenticar
             // La organización se agregará manualmente desde el panel de administración
 
             // Buscar o crear usuario local SIN sucursal y SIN organización automática
             $usuario = $this->findOrCreateLocalUserSinSucursal($personaData, $credentials['password']);
 
+            Log::info('Usuario encontrado/creado', [
+                'usuario_id' => $usuario->usuario_id,
+                'usuario' => $usuario->usuario,
+                'fk_persona_id' => $usuario->fk_persona_id
+            ]);
+
             // Generar token Sanctum
             $token = $usuario->createToken('auth-token', ['*'], now()->addHours(24))->plainTextToken;
+
+            Log::info('Token generado exitosamente');
 
             DB::commit();
 
@@ -62,7 +72,7 @@ class SignInService
             ]);
 
             return [
-                'user' => $usuario->load(['sucursal', 'ventanilla']),
+                'user' => $usuario->load(['sucursal', 'ventanilla', 'roles']),
                 'token' => $token,
                 'token_type' => 'Bearer',
                 'token_rrhh' => $tokenExterno
@@ -72,10 +82,11 @@ class SignInService
             DB::rollBack();
             Log::error('Error en proceso de autenticación', [
                 'usuario' => $credentials['usuario'],
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
-            throw new \Exception('Error interno del servidor durante la autenticación');
+            throw new \Exception('Error interno del servidor durante la autenticación: ' . $e->getMessage());
         }
     }
 
@@ -89,25 +100,41 @@ class SignInService
     }
 
     /**
-     * Buscar o crear usuario en la base de datos local SIN sucursal
+     * Buscar o crear usuario en la base de datos local SIN sucursal y SIN roles
+     * Los roles deben ser asignados manualmente desde la base de datos
      */
     private function findOrCreateLocalUserSinSucursal(array $personaData, string $password): Usuario
     {
         $usuario = Usuario::where('usuario', $personaData['usuario'])->first();
 
         if ($usuario) {
-            $usuario->update([
+            // Mantener ventanilla y sucursal si ya están asignadas
+            $updateData = [
                 'nombre_completo' => $personaData['nombre_completo'],
                 'correo_electronico' => $personaData['correo_electronico'],
                 'password' => Hash::make($password),
-                'fk_persona_id' => $personaData['fk_persona_id'] ?? $usuario->fk_persona_id,
-                'fk_sucursal_id' => null, // No asignar sucursal
-                'fk_ventanilla_id' => null,
                 'activo' => $personaData['activo'] ?? true
-            ]);
+            ];
+
+            // Solo asignar fk_persona_id si está vacío y nunca sobrescribir si ya tiene valor
+            if (empty($usuario->fk_persona_id) && !empty($personaData['fk_persona_id'])) {
+                $updateData['fk_persona_id'] = $personaData['fk_persona_id'];
+            }
+
+            // Si no tiene ventanilla ni sucursal, mantener en null, pero no sobrescribir si ya tiene
+            if (is_null($usuario->fk_ventanilla_id)) {
+                $updateData['fk_ventanilla_id'] = null;
+            }
+            if (is_null($usuario->fk_sucursal_id)) {
+                $updateData['fk_sucursal_id'] = null;
+            }
+
+            $usuario->update($updateData);
             Log::info('Usuario existente actualizado', [
                 'usuario_id' => $usuario->usuario_id,
-                'usuario' => $usuario->usuario
+                'usuario' => $usuario->usuario,
+                'fk_persona_id_nuevo' => $personaData['fk_persona_id'],
+                'fk_persona_id_anterior' => $usuario->fk_persona_id
             ]);
         } else {
             $usuario = Usuario::create([
@@ -115,14 +142,16 @@ class SignInService
                 'nombre_completo' => $personaData['nombre_completo'],
                 'correo_electronico' => $personaData['correo_electronico'],
                 'password' => Hash::make($password),
-                'fk_persona_id' => $personaData['fk_persona_id'] ?? rand(1000, 9999),
-                'fk_sucursal_id' => null, // No asignar sucursal
+                'fk_persona_id' => $personaData['fk_persona_id'] ?? null,
+                'fk_sucursal_id' => null,
                 'fk_ventanilla_id' => null,
                 'activo' => $personaData['activo'] ?? true
             ]);
-            Log::info('Nuevo usuario creado', [
+            Log::info('Nuevo usuario creado SIN ROLES - Requiere asignación manual', [
                 'usuario_id' => $usuario->usuario_id,
-                'usuario' => $usuario->usuario
+                'usuario' => $usuario->usuario,
+                'fk_persona_id' => $usuario->fk_persona_id,
+                'mensaje' => 'El administrador debe asignar roles manualmente en la base de datos'
             ]);
         }
         return $usuario;

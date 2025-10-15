@@ -38,13 +38,41 @@ class VentanillaService
         if (!$sucursal) {
             throw new \Exception('Sucursal no encontrada para la ventanilla.');
         }
-        $orgVentanilla = $sucursal->fk_organizacion_id;
+        
+        // Obtener la organización de la ventanilla
+        $organizacion = Organizacion::find($sucursal->fk_organizacion_id);
+        if (!$organizacion) {
+            throw new \Exception('Organización no encontrada para la ventanilla.');
+        }
 
-        // Obtener el servicio RRHH
+        // Obtener el servicio RRHH y validar usando "usuarios por organización"
         $rrhhService = app(\App\Services\Auth\RrhhService::class);
-        $usuarioDetalle = $rrhhService->getUsuarioDetalle($usuario->fk_persona_id);
-        $orgUsuario = $usuarioDetalle['unidadOrganizacional']['id'] ?? null;
-        if ($orgUsuario != $orgVentanilla) {
+        $usuariosOrganizacion = $rrhhService->getUsuariosPorOrganizacion($organizacion->fk_cod_contacto);
+        
+        if (!$usuariosOrganizacion) {
+            throw new \Exception('No se pudo obtener la lista de usuarios de la organización desde RRHH.');
+        }
+
+        // Verificar si el usuario está en la lista de usuarios de la organización
+        $usuarioEncontrado = false;
+        $listaUsuarios = $usuariosOrganizacion['lista'] ?? $usuariosOrganizacion;
+        
+        foreach ($listaUsuarios as $usuarioRRHH) {
+            $idUsuario = $usuarioRRHH['id'] ?? null;
+                        
+            if ($idUsuario && $idUsuario == $usuario->fk_persona_id) {
+                $usuarioEncontrado = true;
+                break;
+            }
+        }
+
+        if (!$usuarioEncontrado) {
+            // Log para debugging
+            \Illuminate\Support\Facades\Log::info('Usuario no encontrado en organización RRHH', [
+                'usuario_fk_persona_id' => $usuario->fk_persona_id,
+                'organizacion_id' => $organizacion->fk_cod_contacto,
+                'usuarios_rrhh_structure' => array_slice($usuariosOrganizacion, 0, 2) // Solo los primeros 2 para ver estructura
+            ]);
             throw new \Exception('El usuario no pertenece a la organización de la ventanilla según RRHH.');
         }
 
